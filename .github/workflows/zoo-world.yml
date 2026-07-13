@@ -1,0 +1,46 @@
+name: 🦁 ZooWorld
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch: {}   # run manually to open the next world
+
+permissions:
+  contents: write
+  issues: write
+
+# Serialize all game turns so two commands never race on the state files.
+concurrency:
+  group: zoo-world-state
+  cancel-in-progress: false
+
+jobs:
+  play:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (!github.event.issue.pull_request && startsWith(github.event.comment.body, '/'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Process turn
+        run: node game/index.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit world state
+        run: |
+          git config user.name "zooworld-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No state changes."
+            exit 0
+          fi
+          git commit -m "🦁 world tick (${{ github.event.comment.id || 'new world' }})"
+          for delay in 2 4 8 16; do
+            if git push; then exit 0; fi
+            git pull --rebase
+            sleep "$delay"
+          done
+          git push
