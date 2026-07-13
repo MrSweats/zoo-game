@@ -46,8 +46,8 @@ A multiplayer zoo-collecting game played **entirely through GitHub issue comment
 ## Setup (repo owner)
 
 1. Merge this to the default branch and make sure **Actions are enabled**.
-2. Go to **Actions → 🦁 ZooWorld → Run workflow**. This opens the *ZooWorld #1* issue.
-3. Share the issue link — anyone who can comment can play. That's it: no server, no hosting; the world state lives in [`data/`](data/) and every turn is a commit.
+2. Open any issue and comment **`/join`** — the game bootstraps itself: it creates the *ZooWorld #1* issue and seats you there. (Running **Actions → 🦁 ZooWorld → Run workflow** also works.)
+3. Share the world issue link — anyone who can comment can play. That's it: no server, no hosting; the world state lives in [`data/`](data/) and every turn is a commit.
 
 ## Development
 

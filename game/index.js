@@ -77,13 +77,31 @@ async function main() {
 
   const entry = registry.worlds.find((w) => w.issue === issueNumber);
   if (!entry) {
-    // A game-ish command on a non-world issue: point them to an open world.
-    if (/^\/(join|play|help)\b/i.test(body)) {
-      const open = findOpenWorld(registry);
+    // /join works from ANY issue: find (or bootstrap) an open world and put
+    // the player straight in — so the game is fully startable from a phone.
+    const isJoin = /^\/(join|play)\b/i.test(body);
+    const isHelp = /^\/help\b/i.test(body);
+    if (!isJoin && !isHelp) return;
+    let open = findOpenWorld(registry);
+    if (!isJoin) {
       const hint = open
-        ? `Head over to issue #${open.issue} and comment \`/join\` there!`
-        : 'No open world right now — a maintainer can start one by running the **🦁 ZooWorld** workflow.';
-      await gh.postComment(issueNumber, `🦁 This isn't a ZooWorld issue. ${hint}`);
+        ? `Comment \`/join\` in issue #${open.issue} to play — or right here and I'll seat you.`
+        : 'Comment `/join` right here and I\'ll open the first world for you!';
+      await gh.postComment(issueNumber, `🦁 **This repo is a ZooWorld game!** ${hint}`);
+      return;
+    }
+    let openState = open ? loadJson(worldFile(open.world), null) : null;
+    if (!openState) {
+      const created = await createWorld(registry, now);
+      open = { world: created.state.world, issue: created.issueNumber };
+      openState = created.state;
+    }
+    const joinRes = engine.handleCommand(openState, login, '/join', now, Math.random);
+    saveJson(worldFile(open.world), openState);
+    if (joinRes) await gh.postComment(open.issue, joinRes.reply);
+    if (open.issue !== issueNumber) {
+      await gh.postComment(issueNumber,
+        `🎟️ You're in, @${login}! Your zoo is in **ZooWorld #${open.world}** — play in issue #${open.issue}.`);
     }
     return;
   }
