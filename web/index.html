@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>🦁 ZooWorld</title>
+<style>
+  :root {
+    --bg: #1c2a1e; --panel: #263a28; --panel2: #2f4732; --line: #3e5a41;
+    --text: #eaf5e6; --dim: #9fbf9a; --gold: #ffd166; --accent: #7ed957;
+    --danger: #ff6b6b; --blue: #6ec6ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  /* ── Top bar ── */
+  #topbar {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    background: var(--panel); border-bottom: 2px solid var(--line);
+    font-weight: 700; font-size: 15px; flex-wrap: nowrap;
+  }
+  #topbar .stat { white-space: nowrap; }
+  #topbar .spacer { flex: 1; }
+  .iconbtn {
+    background: var(--panel2); border: 2px solid var(--line); color: var(--text);
+    border-radius: 10px; font-size: 16px; padding: 4px 10px; cursor: pointer;
+  }
+  /* ── Tabs ── */
+  #tabs { display: flex; background: var(--panel); border-bottom: 2px solid var(--line); }
+  #tabs button {
+    flex: 1; background: none; border: none; color: var(--dim);
+    padding: 9px 4px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    border-bottom: 3px solid transparent;
+  }
+  #tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
+  /* ── Main area ── */
+  #main { flex: 1; position: relative; min-height: 0; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .page {
+    position: absolute; inset: 0; overflow-y: auto; padding: 14px;
+    background: var(--bg); display: none; touch-action: pan-y;
+  }
+  .page h2 { font-size: 17px; margin-bottom: 10px; }
+  .card {
+    background: var(--panel); border: 2px solid var(--line); border-radius: 14px;
+    padding: 10px 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+  }
+  .card .big { font-size: 30px; }
+  .card .grow { flex: 1; min-width: 0; }
+  .card .title { font-weight: 700; font-size: 14.5px; }
+  .card .sub { color: var(--dim); font-size: 12.5px; margin-top: 2px; }
+  .buy {
+    background: var(--accent); color: #143016; border: none; border-radius: 10px;
+    font-weight: 800; font-size: 13.5px; padding: 8px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .buy:disabled { background: var(--panel2); color: var(--dim); }
+  .badge { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 8px; display: inline-block; }
+  #zoo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .animal-card {
+    background: var(--panel); border: 2px solid var(--line); border-radius: 12px;
+    padding: 8px 4px; text-align: center;
+  }
+  .animal-card .em { font-size: 30px; }
+  .animal-card .nm { font-size: 11.5px; font-weight: 700; margin-top: 2px; }
+  .animal-card .rt { font-size: 10px; margin-top: 2px; }
+  #log-list div { padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--dim); }
+  #log-list div b { color: var(--text); }
+  /* ── Canvas overlays ── */
+  #banner {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,30,20,.92); border: 2px solid var(--gold); color: var(--text);
+    padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 13.5px;
+    max-width: 92%; text-align: center; display: none; z-index: 5; pointer-events: none;
+  }
+  #ticker {
+    position: absolute; left: 8px; right: 8px; bottom: 8px;
+    background: rgba(20,30,20,.85); border: 1.5px solid var(--line);
+    padding: 6px 10px; border-radius: 10px; font-size: 12.5px; color: var(--dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+  }
+  #actionbtn {
+    position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%);
+    background: var(--gold); color: #3a2b00; border: none; border-radius: 14px;
+    font-size: 16px; font-weight: 800; padding: 12px 22px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4); display: none; z-index: 6;
+  }
+  /* ── Modal ── */
+  #modal-back {
+    position: absolute; inset: 0; background: rgba(0,0,0,.6);
+    display: none; align-items: center; justify-content: center; z-index: 10; padding: 18px;
+  }
+  #modal {
+    background: var(--panel); border: 2.5px solid var(--line); border-radius: 18px;
+    width: 100%; max-width: 360px; padding: 18px; text-align: center;
+  }
+  #modal .em { font-size: 58px; }
+  #modal h3 { font-size: 19px; margin: 6px 0 2px; }
+  #modal .sub { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
+  #meter { height: 26px; background: var(--panel2); border: 2px solid var(--line); border-radius: 13px; position: relative; overflow: hidden; margin: 12px 0; display: none; }
+  #meter .zone { position: absolute; top: 0; bottom: 0; background: rgba(126,217,87,.45); }
+  #meter .perfect { position: absolute; top: 0; bottom: 0; background: var(--gold); opacity: .8; }
+  #meter .mark { position: absolute; top: -2px; bottom: -2px; width: 4px; background: #fff; border-radius: 2px; }
+  #modal .row { display: flex; gap: 10px; justify-content: center; margin-top: 8px; }
+  #modal button {
+    border: none; border-radius: 12px; font-weight: 800; font-size: 15px;
+    padding: 12px 20px; cursor: pointer; flex: 1;
+  }
+  #modal .primary { background: var(--accent); color: #143016; }
+  #modal .ghost { background: var(--panel2); color: var(--text); border: 2px solid var(--line); }
+  #modal .result { font-size: 15px; font-weight: 700; margin: 8px 0; min-height: 22px; }
+</style>
+</head>
+<body>
+  <div id="topbar">
+    <span class="stat">🪙 <span id="hud-coins">0</span></span>
+    <span class="stat">⭐ Lv <span id="hud-level">1</span></span>
+    <span class="stat">🛡️×<span id="hud-sec">0</span></span>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="btn-sound">🔊</button>
+    <button class="iconbtn" id="btn-pause">⏸</button>
+  </div>
+  <div id="tabs">
+    <button data-tab="world" class="active">🗺️ World</button>
+    <button data-tab="zoo">🏛️ My Zoo</button>
+    <button data-tab="shop">🏪 Shop</button>
+    <button data-tab="rivals">🏆 Rivals</button>
+    <button data-tab="log">📜 Log</button>
+  </div>
+  <div id="main">
+    <canvas id="cv"></canvas>
+    <div id="banner"></div>
+    <div id="ticker">Welcome to ZooWorld! Hold anywhere to walk. 🐾</div>
+    <button id="actionbtn"></button>
+
+    <div class="page" id="page-zoo"><h2>🏛️ Your collection</h2><div id="zoo-grid"></div></div>
+    <div class="page" id="page-shop"><h2>🏪 Shop</h2><div id="shop-list"></div></div>
+    <div class="page" id="page-rivals"><h2>🏆 Leaderboard</h2><div id="rivals-list"></div></div>
+    <div class="page" id="page-log"><h2>📜 World events</h2><div id="log-list"></div></div>
+
+    <div id="modal-back"><div id="modal">
+      <div class="em" id="m-em">🦊</div>
+      <h3 id="m-title">Fox</h3>
+      <div class="sub" id="m-sub"></div>
+      <div id="meter"><div class="zone"></div><div class="perfect"></div><div class="mark"></div></div>
+      <div class="result" id="m-result"></div>
+      <div class="row">
+        <button class="ghost" id="m-cancel">Leave</button>
+        <button class="primary" id="m-go">Capture</button>
+      </div>
+    </div></div>
+  </div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════════════════
+// ZooWorld — a zoo-collecting sandbox on a ring-road world.
+// You + 7 AI zookeepers. Capture rarities, roll special
+// editions, rob rival zoos, and defend your own.
+// ════════════════════════════════════════════════════════════
+
+// ── Data ─────────────────────────────────────────────────────
+const RAR = {
+  common:    { label: 'Common',    color: '#b9c6b3', chance: 0.90, value: 1,   xp: 1 },
+  uncommon:  { label: 'Uncommon',  color: '#7ed957', chance: 0.72, value: 3,   xp: 3 },
+  rare:      { label: 'Rare',      color: '#6ec6ff', chance: 0.52, value: 8,   xp: 8 },
+  epic:      { label: 'Epic',      color: '#c792ea', chance: 0.34, value: 20,  xp: 20 },
+  legendary: { label: 'Legendary', color: '#ffd166', chance: 0.20, value: 50,  xp: 50 },
+  mythical:  { label: 'MYTHICAL',  color: '#ff6b6b', chance: 0.12, value: 150, xp: 120 },
+};
+const SPAWN_TABLE = [['common',.46],['uncommon',.27],['rare',.16],['epic',.08],['legendary',.027],['mythical',.003]];
+const VARIANTS = [
+  { key:'golden', label:'Golden', badge:'🌟', chance:0.01, mult:20 },
+  { key:'shiny',  label:'Shiny',  badge:'✨', chance:0.04, mult:5 },
+];
+const SPECIES = [
+  ['🐇','Rabbit','common'],['🐿️','Squirrel','common'],['🐀','Rat','common'],['🐁','Mouse','common'],
+  ['🐓','Rooster','common'],['🐤','Chick','common'],['🦆','Duck','common'],['🐸','Frog','common'],
+  ['🐌','Snail','common'],['🐝','Bee','common'],['🐖','Pig','common'],['🐑','Sheep','common'],
+  ['🐐','Goat','common'],['🐄','Cow','common'],['🐈','Cat','common'],['🕊️','Dove','common'],
+  ['🦊','Fox','uncommon'],['🦝','Raccoon','uncommon'],['🦔','Hedgehog','uncommon'],['🦇','Bat','uncommon'],
+  ['🦉','Owl','uncommon'],['🦅','Eagle','uncommon'],['🦢','Swan','uncommon'],['🦜','Parrot','uncommon'],
+  ['🐢','Turtle','uncommon'],['🐍','Snake','uncommon'],['🦎','Lizard','uncommon'],['🐠','Tropical Fish','uncommon'],
+  ['🦀','Crab','uncommon'],['🐙','Octopus','uncommon'],['🦌','Deer','uncommon'],['🐗','Boar','uncommon'],
+  ['🦃','Turkey','uncommon'],['🦚','Peacock','uncommon'],
+  ['🐺','Wolf','rare'],['🐆','Leopard','rare'],['🐊','Crocodile','rare'],['🦈','Shark','rare'],
+  ['🐬','Dolphin','rare'],['🦭','Seal','rare'],['🐧','Penguin','rare'],['🦩','Flamingo','rare'],
+  ['🦥','Sloth','rare'],['🦦','Otter','rare'],['🦨','Skunk','rare'],['🦡','Badger','rare'],
+  ['🐫','Camel','rare'],['🦙','Llama','rare'],['🦘','Kangaroo','rare'],['🐒','Monkey','rare'],
+  ['🦁','Lion','epic'],['🐯','Tiger','epic'],['🐻','Bear','epic'],['🐻‍❄️','Polar Bear','epic'],
+  ['🦍','Gorilla','epic'],['🦧','Orangutan','epic'],['🐘','Elephant','epic'],['🦏','Rhino','epic'],
+  ['🦛','Hippo','epic'],['🦒','Giraffe','epic'],['🦓','Zebra','epic'],['🐼','Panda','epic'],['🐋','Whale','epic'],
+  ['🦕','Brontosaurus','legendary'],['🦖','T-Rex','legendary'],['🦤','Dodo','legendary'],['🦣','Mammoth','legendary'],
+  ['🐉','Dragon','mythical'],['🦄','Unicorn','mythical'],['🐲','Drake','mythical'],['🦑','Kraken','mythical'],
+].map(([emoji,name,rarity]) => ({ emoji, name, rarity }));
+
+const RIVAL_DEFS = [
+  { name:'Mabel',  avatar:'👵' }, { name:'Ravi',   avatar:'👳' },
+  { name:'Zara',   avatar:'🧕' }, { name:'Bruno',  avatar:'🧔' },
+  { name:'Suki',   avatar:'👧' }, { name:'Otto',   avatar:'👴' },
+  { name:'Nadia',  avatar:'👩' },
+];
+const PLAYER_EMOJI = '🤠';
+
+// ── World geometry ───────────────────────────────────────────
+const W = 21, H = 21, RMIN = 3, RMAX = 17, TILE = 48;
+const ZOO_POS = [
+  {r:3,c:3},{r:3,c:10},{r:3,c:17},{r:10,c:17},
+  {r:17,c:17},{r:17,c:10},{r:17,c:3},{r:10,c:3},
+];
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const isRoad = (r,c) => ((r===RMIN||r===RMAX)&&c>=RMIN&&c<=RMAX)||((c===RMIN||c===RMAX)&&r>=RMIN&&r<=RMAX);
+const zooIndexAt = (r,c) => ZOO_POS.findIndex(z=>z.r===r&&z.c===c);
+
+function buildTerrain(seed){
+  const rand = mulberry32(seed), decor=['🌲','🌳','🌴','🌵','🌾','🌸','🪨'];
+  const grid=[];
+  for(let r=0;r<H;r++){const row=[];for(let c=0;c<W;c++){
+    if(zooIndexAt(r,c)>=0) row.push({t:'zoo'});
+    else if(isRoad(r,c)) row.push({t:'road'});
+    else row.push({t:'grass', d: rand()<0.22?decor[(rand()*decor.length)|0]:null, g:(rand()*3)|0});
+  } grid.push(row);}
+  let ponds=0;
+  while(ponds<5){const r=1+((rand()*(H-2))|0), c=1+((rand()*(W-2))|0);
+    if(grid[r][c].t==='grass'){grid[r][c]={t:'water'};ponds++;}}
+  return grid;
+}
+const passable = (g,r,c) => r>=0&&c>=0&&r<H&&c<W&&g[Math.floor(r)][Math.floor(c)].t!=='water';
+
+// ── Helpers ──────────────────────────────────────────────────
+const rnd = Math.random;
+function rollRarity(){let x=rnd();for(const[k,p]of SPAWN_TABLE){if(x<p)return k;x-=p;}return 'common';}
+function rollSpecies(){const tier=rollRarity();const pool=SPECIES.filter(s=>s.rarity===tier);return pool[(rnd()*pool.length)|0];}
+function rollVariant(){const x=rnd();let a=0;for(const v of VARIANTS){a+=v.chance;if(x<a)return v.key;}return null;}
+function vinfo(k){return VARIANTS.find(v=>v.key===k)||null;}
+function aValue(a){const v=vinfo(a.variant);return RAR[a.rarity].value*(v?v.mult:1);}
+function aLabel(a){const v=vinfo(a.variant);return `${v?v.badge:''}${a.emoji} ${v?v.label+' ':''}${a.name}`;}
+function score(list){return list.reduce((s,a)=>s+aValue(a),0);}
+function levelOf(xp){return 1+Math.floor(Math.sqrt(xp/10));}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function fmt(n){return n>=1000?(n/1000).toFixed(1)+'k':Math.floor(n);}
+
+// ── State ────────────────────────────────────────────────────
+const SAVE_KEY='zooworld-save-v1';
+let S; // game state
+function newGame(){
+  const seed=(rnd()*1e9)|0;
+  const starter=SPECIES.filter(s=>s.rarity==='common')[(rnd()*16)|0];
+  S={
+    seed, coins:30, xp:0, security:0, gear:{net:false,tranq:false},
+    animals:[{...starter, variant:null}],
+    px:ZOO_POS[0].c+0.5, py:ZOO_POS[0].r+0.5,
+    heistLockUntil:0, heistCoolUntil:0,
+    rivals: RIVAL_DEFS.map((d,i)=>({
+      ...d, zoo:i+1, x:ZOO_POS[i+1].c+0.5, y:ZOO_POS[i+1].r+0.5,
+      tx:ZOO_POS[i+1].c+0.5, ty:ZOO_POS[i+1].r+0.5,
+      animals:[randomAnimal('common')], security:(rnd()*2)|0,
+      nextCap: now()+30e3+rnd()*90e3, nextRob: now()+120e3+rnd()*240e3, alertUntil:0,
+    })),
+    spawns:[], nextSpawn:0, nextMyth: now()+240e3+rnd()*360e3,
+    log:[], muted:false, lastSeen: now(), tutorialDone:false,
+  };
+}
+function randomAnimal(forceTier){
+  const sp = forceTier ? SPECIES.filter(s=>s.rarity===forceTier)[(rnd()*SPECIES.filter(s=>s.rarity===forceTier).length)|0] : rollSpecies();
+  return {...sp, variant: rollVariant()};
+}
+function now(){return Date.now();}
+function save(){S.lastSeen=now();try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+function load(){
+  try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;S=JSON.parse(raw);return true;}catch(e){return false;}
+}
+
+// ── Audio (tiny beeps) ───────────────────────────────────────
+let AC=null;
+function beep(freq,dur=0.09,type='square',vol=0.04){
+  if(S.muted)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type;o.frequency.value=freq;g.gain.value=vol;
+    o.connect(g);g.connect(AC.destination);o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur);o.stop(AC.currentTime+dur);
+  }catch(e){}
+}
+const sfx={
+  step:()=>{}, coin:()=>beep(880,.06,'sine'), good:()=>{beep(660,.1);setTimeout(()=>beep(990,.12),90);},
+  great:()=>{beep(660,.08);setTimeout(()=>beep(880,.08),80);setTimeout(()=>beep(1320,.15),160);},
+  bad:()=>beep(180,.2,'sawtooth'), alert:()=>{beep(520,.1);setTimeout(()=>beep(390,.15),110);},
+};
+
+// ── Logging / banner ─────────────────────────────────────────
+function logEvent(html,important){
+  S.log.unshift({t:now(),html}); if(S.log.length>60)S.log.pop();
+  document.getElementById('ticker').innerHTML=html;
+  if(important) showBanner(html);
+  renderLog();
+}
+let bannerTimer=null;
+function showBanner(html){
+  const b=document.getElementById('banner');
+  b.innerHTML=html; b.style.display='block';
+  clearTimeout(bannerTimer); bannerTimer=setTimeout(()=>b.style.display='none',5000);
+}
+
+// ── Canvas / rendering ───────────────────────────────────────
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let vw=0,vh=0,dpr=1;
+function resize(){
+  const r=document.getElementById('main').getBoundingClientRect();
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  vw=r.width;vh=r.height;
+  cv.width=vw*dpr;cv.height=vh*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+new ResizeObserver(resize).observe(document.getElementById('main'));
+
+let grid=null;
+const GRASS=['#8fce5e','#86c457','#7cba50'];
+function draw(){
+  if(!grid)return;
+  const camx=clamp(S.px*TILE-vw/2,0,W*TILE-vw), camy=clamp(S.py*TILE-vh/2,0,H*TILE-vh);
+  ctx.clearRect(0,0,vw,vh);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const r0=Math.max(0,Math.floor(camy/TILE)),r1=Math.min(H-1,Math.ceil((camy+vh)/TILE));
+  const c0=Math.max(0,Math.floor(camx/TILE)),c1=Math.min(W-1,Math.ceil((camx+vw)/TILE));
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){
+    const t=grid[r][c],x=c*TILE-camx,y=r*TILE-camy;
+    if(t.t==='water'){ctx.fillStyle='#4aa3df';ctx.fillRect(x,y,TILE,TILE);
+      ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillRect(x+8,y+14+Math.sin(perf/500+r+c)*3,14,3);}
+    else if(t.t==='road'){ctx.fillStyle='#d9b98c';ctx.fillRect(x,y,TILE,TILE);
+      ctx.fillStyle='#c8a878';ctx.fillRect(x+4,y+4,6,6);ctx.fillRect(x+30,y+26,6,6);}
+    else{ctx.fillStyle=GRASS[t.g||0];ctx.fillRect(x,y,TILE,TILE);
+      if(t.d){ctx.font='22px serif';ctx.fillText(t.d,x+TILE/2,y+TILE/2+2);}}
+  }
+  // zoos
+  for(let i=0;i<8;i++){
+    const z=ZOO_POS[i],x=z.c*TILE-camx,y=z.r*TILE-camy;
+    if(x<-TILE*2||y<-TILE*2||x>vw+TILE||y>vh+TILE)continue;
+    ctx.fillStyle=i===0?'#ffe9a8':'#e8d5b5';ctx.fillRect(x+2,y+2,TILE-4,TILE-4);
+    ctx.strokeStyle='#8a6d3b';ctx.lineWidth=3;ctx.strokeRect(x+2,y+2,TILE-4,TILE-4);
+    ctx.font='20px serif';ctx.fillText('🏛️',x+TILE/2,y+TILE/2-4);
+    ctx.font='bold 11px sans-serif';ctx.fillStyle='#5b421f';
+    ctx.fillText(i===0?'⭐ YOU':(S.rivals[i-1].name),x+TILE/2,y+TILE-9);
+  }
+  // spawned animals (bobbing)
+  ctx.font='26px serif';
+  for(const sp of S.spawns){
+    const x=sp.x*TILE-camx,y=sp.y*TILE-camy+Math.sin(perf/300+sp.id)*3;
+    if(sp.rarity!=='common'&&sp.rarity!=='uncommon'){
+      ctx.fillStyle=RAR[sp.rarity].color;ctx.globalAlpha=.35;
+      ctx.beginPath();ctx.arc(x,y+4,16,0,7);ctx.fill();ctx.globalAlpha=1;
+    }
+    ctx.fillText(sp.emoji,x,y);
+  }
+  // rivals
+  for(const rv of S.rivals){
+    const x=rv.x*TILE-camx,y=rv.y*TILE-camy;
+    ctx.font='24px serif';ctx.fillText(rv.avatar,x,y);
+    ctx.font='bold 10px sans-serif';ctx.fillStyle='rgba(0,0,0,.55)';
+    ctx.fillText(rv.name,x,y-18);
+  }
+  // player — marker ring so you always stand out
+  {
+    const x=S.px*TILE-camx,y=S.py*TILE-camy;
+    ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(x,y+14,11,4,0,0,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.strokeStyle='#ffd166';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(x,y,15,0,7);ctx.fill();ctx.stroke();
+    ctx.font='21px serif';ctx.fillText(PLAYER_EMOJI,x,y+1);
+  }
+}
+
+// ── Input: hold to walk, WASD/arrows ─────────────────────────
+const keys={};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+let pointer=null;
+cv.addEventListener('pointerdown',e=>{pointer={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove',e=>{if(pointer){pointer.x=e.clientX;pointer.y=e.clientY;}});
+cv.addEventListener('pointerup',()=>pointer=null);
+cv.addEventListener('pointercancel',()=>pointer=null);
+
+function playerInput(dt){
+  let dx=0,dy=0;
+  if(keys.w||keys.arrowup)dy-=1; if(keys.s||keys.arrowdown)dy+=1;
+  if(keys.a||keys.arrowleft)dx-=1; if(keys.d||keys.arrowright)dx+=1;
+  if(pointer){
+    const rect=cv.getBoundingClientRect();
+    const camx=clamp(S.px*TILE-vw/2,0,W*TILE-vw), camy=clamp(S.py*TILE-vh/2,0,H*TILE-vh);
+    const wx=(pointer.x-rect.left+camx)/TILE, wy=(pointer.y-rect.top+camy)/TILE;
+    const ddx=wx-S.px,ddy=wy-S.py,d=Math.hypot(ddx,ddy);
+    if(d>0.2){dx=ddx/d;dy=ddy/d;}
+  }
+  const len=Math.hypot(dx,dy);
+  if(len>0){
+    dx/=len;dy/=len;
+    const sp=3.6*dt;
+    const nx=S.px+dx*sp, ny=S.py+dy*sp;
+    if(passable(grid,S.py,nx))S.px=clamp(nx,0.3,W-0.3);
+    if(passable(grid,ny,S.px))S.py=clamp(ny,0.3,H-0.3);
+  }
+}
+
+// ── Spawning ─────────────────────────────────────────────────
+let spawnSeq=1;
+function spawnAnimal(forceMyth){
+  if(S.spawns.length>=14&&!forceMyth)return null;
+  const g=grid;let r,c,tries=0;
+  do{r=(rnd()*H)|0;c=(rnd()*W)|0;tries++;}
+  while(tries<80&&(!passable(g,r,c)||g[r][c].t==='zoo'||S.spawns.some(s=>Math.abs(s.x-c)<1&&Math.abs(s.y-r)<1)));
+  if(tries>=80)return null;
+  let sp;
+  if(forceMyth){const pool=SPECIES.filter(s=>s.rarity==='mythical');sp=pool[(rnd()*pool.length)|0];}
+  else sp=rollSpecies();
+  const a={id:spawnSeq++,...sp,x:c+0.5,y:r+0.5,born:now(),wt:now()+1500+rnd()*2500};
+  S.spawns.push(a);
+  if(sp.rarity==='mythical'||forceMyth){
+    sfx.alert();
+    logEvent(`🚨 <b>A wild ${sp.emoji} ${sp.name} has appeared!</b> Find it before the rivals do!`,true);
+  }else if(sp.rarity==='legendary'){
+    logEvent(`👀 A ${sp.emoji} <b>${sp.name}</b> (Legendary) was spotted somewhere in the world...`);
+  }
+  return a;
+}
+function tickSpawns(){
+  const t=now();
+  if(t>S.nextSpawn){S.nextSpawn=t+7000+rnd()*6000;spawnAnimal(false);}
+  if(t>S.nextMyth){S.nextMyth=t+300e3+rnd()*420e3;spawnAnimal(true);}
+  S.spawns=S.spawns.filter(sp=>t-sp.born<(sp.rarity==='mythical'?120e3:90e3));
+  for(const sp of S.spawns){ // gentle wander
+    if(t>sp.wt){sp.wt=t+1500+rnd()*2500;
+      const nx=sp.x+(rnd()*2-1)*0.9,ny=sp.y+(rnd()*2-1)*0.9;
+      if(passable(grid,ny,nx)&&grid[Math.floor(ny)][Math.floor(nx)].t!=='zoo'){sp.tx=nx;sp.ty=ny;}}
+    if(sp.tx!==undefined){
+      const d=Math.hypot(sp.tx-sp.x,sp.ty-sp.y);
+      if(d>0.05){sp.x+=(sp.tx-sp.x)/d*0.014;sp.y+=(sp.ty-sp.y)/d*0.014;}
+    }
+  }
+}
+
+// ── Rival AI ─────────────────────────────────────────────────
+function tickRivals(dt){
+  const t=now();
+  for(const rv of S.rivals){
+    // pick destinations: nearest spawn (esp. rare ones), sometimes player zoo
+    const d=Math.hypot(rv.tx-rv.x,rv.ty-rv.y);
+    if(d<0.2){
+      let target=null,best=1e9;
+      for(const sp of S.spawns){
+        const dist=Math.hypot(sp.x-rv.x,sp.y-rv.y)-RAR[sp.rarity].value*0.15;
+        if(dist<best){best=dist;target=sp;}
+      }
+      if(target&&rnd()<0.75){rv.tx=target.x;rv.ty=target.y;}
+      else{const z=ZOO_POS[(rnd()*8)|0];rv.tx=z.c+0.5;rv.ty=z.r+0.5;}
+    }else{
+      const step=2.1*dt;
+      const nx=rv.x+(rv.tx-rv.x)/d*step,ny=rv.y+(rv.ty-rv.y)/d*step;
+      if(passable(grid,rv.y,nx))rv.x=nx;
+      if(passable(grid,ny,rv.x))rv.y=ny;
+    }
+    // captures: contact with a spawn
+    for(let i=S.spawns.length-1;i>=0;i--){
+      const sp=S.spawns[i];
+      if(Math.hypot(sp.x-rv.x,sp.y-rv.y)<0.5&&t>rv.nextCap){
+        rv.nextCap=t+20e3+rnd()*40e3;
+        if(rnd()<RAR[sp.rarity].chance*0.8){
+          S.spawns.splice(i,1);
+          const a={emoji:sp.emoji,name:sp.name,rarity:sp.rarity,variant:rollVariant()};
+          rv.animals.push(a);
+          if(RAR[sp.rarity].value>=20||a.variant)
+            logEvent(`😤 <b>${rv.name}</b> captured ${aLabel(a)}${sp.rarity==='mythical'?' — a MYTHICAL!':''}!`,sp.rarity==='mythical');
+        }
+      }
+    }
+    // background growth so the leaderboard moves even off-screen
+    if(t>rv.nextCap+60e3){rv.nextCap=t+30e3+rnd()*60e3;rv.animals.push(randomAnimal());}
+    // robbery attempts
+    if(t>rv.nextRob){
+      rv.nextRob=t+180e3+rnd()*300e3;
+      if(rnd()<0.5&&S.animals.length>1){ // target: you
+        const p=clamp(0.4-0.06*S.security,0.05,0.4);
+        if(rnd()<p){
+          const i=(rnd()*S.animals.length)|0, loot=S.animals.splice(i,1)[0];
+          rv.animals.push(loot);sfx.alert();
+          logEvent(`🚨 <b>${rv.name} robbed your zoo and took ${aLabel(loot)}!</b> Buy 🛡️ security!`,true);
+        }else{
+          logEvent(`😅 <b>${rv.name}</b> tried to rob your zoo — your security caught them!`,true);sfx.good();
+        }
+        renderZoo();updateHud();
+      }else{ // rival robs rival
+        const others=S.rivals.filter(o=>o!==rv&&o.animals.length>0);
+        if(others.length){
+          const v=others[(rnd()*others.length)|0];
+          if(rnd()<0.4){const loot=v.animals.splice((rnd()*v.animals.length)|0,1)[0];rv.animals.push(loot);
+            logEvent(`🥷 <b>${rv.name}</b> stole ${aLabel(loot)} from <b>${v.name}</b>!`);}
+        }
+      }
+    }
+    rv.security=Math.min(5,Math.floor(score(rv.animals)/120)); // rivals slowly harden
+  }
+}
+
+// ── Economy ──────────────────────────────────────────────────
+let coinCarry=0;
+function tickEconomy(dt){
+  coinCarry+=score(S.animals)/60*dt; // score per minute
+  if(coinCarry>=1){const add=Math.floor(coinCarry);coinCarry-=add;S.coins+=add;updateHud();}
+}
+
+// ── Interaction: capture & heist ─────────────────────────────
+const actionBtn=document.getElementById('actionbtn');
+let nearSpawn=null, nearZoo=-1;
+function tickProximity(){
+  nearSpawn=null;nearZoo=-1;
+  for(const sp of S.spawns)if(Math.hypot(sp.x-S.px,sp.y-S.py)<0.6){nearSpawn=sp;break;}
+  if(!nearSpawn)for(let i=1;i<8;i++){
+    const z=ZOO_POS[i];
+    if(Math.hypot(z.c+0.5-S.px,z.r+0.5-S.py)<0.9){nearZoo=i;break;}
+  }
+  if(nearSpawn){actionBtn.textContent=`🐾 Capture ${nearSpawn.emoji}`;actionBtn.style.display='block';}
+  else if(nearZoo>0){
+    const t=now();
+    if(t<S.heistLockUntil)actionBtn.textContent=`🚔 Busted! ${Math.ceil((S.heistLockUntil-t)/1000)}s`;
+    else if(t<S.heistCoolUntil)actionBtn.textContent=`🕶️ Lay low ${Math.ceil((S.heistCoolUntil-t)/1000)}s`;
+    else actionBtn.textContent=`🥷 Heist ${S.rivals[nearZoo-1].name}'s zoo`;
+    actionBtn.style.display='block';
+  }
+  else actionBtn.style.display='none';
+}
+actionBtn.addEventListener('click',()=>{
+  if(nearSpawn)openCapture(nearSpawn);
+  else if(nearZoo>0&&now()>=S.heistLockUntil&&now()>=S.heistCoolUntil)openHeist(nearZoo);
+});
+
+// ── Modal + timing minigame ──────────────────────────────────
+const mBack=document.getElementById('modal-back'),meter=document.getElementById('meter'),
+  mark=meter.querySelector('.mark'),zone=meter.querySelector('.zone'),perfectEl=meter.querySelector('.perfect'),
+  mGo=document.getElementById('m-go'),mCancel=document.getElementById('m-cancel'),
+  mResult=document.getElementById('m-result');
+let modal=null; // {kind:'capture'|'heist', ...}
+let paused=false;
+
+function openModal(){mBack.style.display='flex';paused=true;}
+function closeModal(){mBack.style.display='none';modal=null;paused=false;mResult.textContent='';meter.style.display='none';}
+
+function baseCaptureChance(sp){
+  let c=RAR[sp.rarity].chance;
+  if(S.gear.net)c+=0.10; if(S.gear.tranq)c+=0.10;
+  return Math.min(c,0.95);
+}
+function openCapture(sp){
+  modal={kind:'capture',sp,phase:'idle'};
+  document.getElementById('m-em').textContent=sp.emoji;
+  document.getElementById('m-title').textContent=sp.name;
+  document.getElementById('m-sub').innerHTML=
+    `<span class="badge" style="background:${RAR[sp.rarity].color};color:#14231a">${RAR[sp.rarity].label}</span>`+
+    ` · base odds ${Math.round(baseCaptureChance(sp)*100)}% · stop the marker in the zone for a bonus!`;
+  mGo.textContent='Capture';mGo.style.display='';mCancel.textContent='Leave';
+  openModal();startMeter();
+}
+function heistChance(rv){return clamp(0.55+0.04*levelOf(S.xp)-0.08*rv.security,0.10,0.85);}
+function openHeist(zi){
+  const rv=S.rivals[zi-1];
+  modal={kind:'heist',rv,phase:'idle'};
+  document.getElementById('m-em').textContent='🥷';
+  document.getElementById('m-title').textContent=`Heist ${rv.name}'s zoo`;
+  document.getElementById('m-sub').innerHTML=
+    `${rv.animals.length} animals · 🛡️×${rv.security} · base odds ${Math.round(heistChance(rv)*100)}%`+
+    `<br>Get caught and you're locked out for 90s!`;
+  mGo.textContent='Break in';mGo.style.display='';mCancel.textContent='Back away';
+  openModal();startMeter();
+}
+// oscillating marker
+let meterT=0,meterOn=false,zoneL=0,zoneW=0,perfL=0,perfW=0;
+function startMeter(){
+  meter.style.display='block';meterOn=true;meterT=rnd()*3;
+  zoneW=0.24;zoneL=0.18+rnd()*0.4; perfW=0.06;perfL=zoneL+zoneW/2-perfW/2;
+  zone.style.left=(zoneL*100)+'%';zone.style.width=(zoneW*100)+'%';
+  perfectEl.style.left=(perfL*100)+'%';perfectEl.style.width=(perfW*100)+'%';
+}
+function meterPos(){return 0.5+0.48*Math.sin(meterT*3.4);}
+function tickMeter(dt){
+  if(!meterOn)return;
+  meterT+=dt;
+  mark.style.left=(meterPos()*100)+'%';
+}
+mGo.addEventListener('click',()=>{
+  if(!modal||modal.phase!=='idle')return;
+  modal.phase='done';meterOn=false;
+  const pos=meterPos();
+  let bonus=0,hit='';
+  if(pos>=perfL&&pos<=perfL+perfW){bonus=0.25;hit='🎯 PERFECT! +25%';}
+  else if(pos>=zoneL&&pos<=zoneL+zoneW){bonus=0.12;hit='✅ Nice! +12%';}
+  else hit='❌ Missed the zone';
+  if(modal.kind==='capture')resolveCapture(modal.sp,bonus,hit);
+  else resolveHeist(modal.rv,bonus,hit);
+});
+mCancel.addEventListener('click',closeModal);
+mBack.addEventListener('click',e=>{if(e.target===mBack&&(!modal||modal.phase!=='idle'))closeModal();});
+
+function resolveCapture(sp,bonus,hit){
+  const chance=Math.min(baseCaptureChance(sp)+bonus,0.98);
+  const ok=rnd()<chance;
+  const idx=S.spawns.indexOf(sp);
+  if(ok){
+    if(idx>=0)S.spawns.splice(idx,1);
+    const a={emoji:sp.emoji,name:sp.name,rarity:sp.rarity,variant:rollVariant()};
+    S.animals.push(a);S.xp+=RAR[sp.rarity].xp;
+    const v=vinfo(a.variant);
+    mResult.innerHTML=`${hit}<br>🎊 Caught <b>${aLabel(a)}</b>! +${RAR[sp.rarity].xp} XP`+
+      (v?`<br>${v.badge} <b>${v.label.toUpperCase()} EDITION!</b> Worth ${v.mult}× — rivals will want it...`:'');
+    v||sp.rarity==='mythical'?sfx.great():sfx.good();
+    if(sp.rarity==='mythical')logEvent(`👑 <b>You captured the mythical ${sp.emoji} ${sp.name}!</b>`,true);
+    else if(v)logEvent(`${v.badge} You caught a <b>${v.label} ${sp.name}</b>!`);
+    renderZoo();updateHud();
+  }else{
+    const fled=rnd()<0.5;
+    if(fled&&idx>=0)S.spawns.splice(idx,1);
+    mResult.innerHTML=`${hit}<br>💨 The ${sp.emoji} ${sp.name} slipped away${fled?' and fled!':' — it\'s still nearby!'}`;
+    sfx.bad();
+  }
+  mGo.style.display='none';mCancel.textContent='Continue';save();
+}
+function resolveHeist(rv,bonus,hit){
+  const chance=Math.min(heistChance(rv)+bonus*0.6,0.92);
+  if(rv.animals.length===0){mResult.textContent='Their pens are empty!';mGo.style.display='none';return;}
+  if(rnd()<chance){
+    const loot=rv.animals.splice((rnd()*rv.animals.length)|0,1)[0];
+    S.animals.push(loot);
+    S.heistCoolUntil=now()+45e3;
+    mResult.innerHTML=`${hit}<br>🥷 <b>HEIST SUCCESSFUL!</b> You made off with <b>${aLabel(loot)}</b>!`;
+    sfx.great();
+    logEvent(`🥷 You stole ${aLabel(loot)} from <b>${rv.name}</b>! Watch your back...`);
+    rv.nextRob=Math.min(rv.nextRob,now()+60e3+rnd()*60e3); // revenge brewing
+    renderZoo();updateHud();
+  }else{
+    S.heistLockUntil=now()+90e3;
+    mResult.innerHTML=`${hit}<br>🚨 <b>BUSTED!</b> ${rv.name}'s guards caught you. Locked out for 90s.`;
+    sfx.bad();
+    logEvent(`🚔 <b>${rv.name}</b> caught you mid-heist. Embarrassing.`);
+  }
+  mGo.style.display='none';mCancel.textContent='Run!';save();
+}
+
+// ── Shop ─────────────────────────────────────────────────────
+const SHOP=[
+  {key:'guard',emoji:'🛡️',name:'Security upgrade',desc:'-6% rival robbery odds per level (max 5)',
+    cost:()=>50*(S.security+1),can:()=>S.security<5,apply:()=>S.security++},
+  {key:'net',emoji:'🕸️',name:'Capture net',desc:'+10% capture chance (permanent)',
+    cost:()=>150,can:()=>!S.gear.net,apply:()=>S.gear.net=true},
+  {key:'tranq',emoji:'💉',name:'Tranq darts',desc:'+10% capture chance (stacks with net)',
+    cost:()=>400,can:()=>!S.gear.tranq,apply:()=>S.gear.tranq=true},
+  {key:'lure',emoji:'🍖',name:'Animal lure',desc:'A wild animal appears near you right now',
+    cost:()=>40,can:()=>true,apply:()=>{
+      const a=spawnAnimal(false);
+      if(a){a.x=clamp(S.px+(rnd()*4-2),1,W-1);a.y=clamp(S.py+(rnd()*4-2),1,H-1);}
+    }},
+];
+function renderShop(){
+  const el=document.getElementById('shop-list');
+  el.innerHTML=SHOP.map((it,i)=>{
+    const owned=!it.can(), cost=it.cost();
+    return `<div class="card"><div class="big">${it.emoji}</div><div class="grow">
+      <div class="title">${it.name}${it.key==='guard'?` (🛡️×${S.security})`:''}</div>
+      <div class="sub">${it.desc}</div></div>
+      <button class="buy" data-i="${i}" ${owned||S.coins<cost?'disabled':''}>${owned?'MAX':cost+' 🪙'}</button></div>`;
+  }).join('');
+  el.querySelectorAll('.buy').forEach(b=>b.addEventListener('click',()=>{
+    const it=SHOP[+b.dataset.i];
+    if(!it.can()||S.coins<it.cost())return;
+    S.coins-=it.cost();it.apply();sfx.coin();
+    updateHud();renderShop();save();
+    logEvent(`🛍️ Bought ${it.emoji} <b>${it.name}</b>.`);
+  }));
+}
+
+// ── UI: tabs, HUD, pages ─────────────────────────────────────
+const RARITY_ORDER=['mythical','legendary','epic','rare','uncommon','common'];
+function renderZoo(){
+  const el=document.getElementById('zoo-grid');
+  const sorted=[...S.animals].sort((a,b)=>aValue(b)-aValue(a));
+  document.querySelector('#page-zoo h2').textContent=
+    `🏛️ Your collection — ${S.animals.length} animals · score ${score(S.animals)}`;
+  el.innerHTML=sorted.map(a=>{const v=vinfo(a.variant);return `
+    <div class="animal-card" style="border-color:${RAR[a.rarity].color}">
+      <div class="em">${v?v.badge:''}${a.emoji}</div>
+      <div class="nm">${v?v.label+' ':''}${a.name}</div>
+      <div class="rt" style="color:${RAR[a.rarity].color}">${RAR[a.rarity].label} · ${aValue(a)}🪙/m</div>
+    </div>`;}).join('');
+}
+function renderRivals(){
+  const rows=[{name:'YOU ⭐',avatar:PLAYER_EMOJI,sc:score(S.animals),n:S.animals.length,sec:S.security,you:true},
+    ...S.rivals.map(r=>({name:r.name,avatar:r.avatar,sc:score(r.animals),n:r.animals.length,sec:r.security}))]
+    .sort((a,b)=>b.sc-a.sc);
+  const medals=['🥇','🥈','🥉'];
+  document.getElementById('rivals-list').innerHTML=rows.map((r,i)=>`
+    <div class="card" ${r.you?'style="border-color:var(--gold)"':''}>
+      <div class="big">${medals[i]||(i+1)+'.'}</div><div class="big">${r.avatar}</div>
+      <div class="grow"><div class="title">${r.name}</div>
+      <div class="sub">${r.n} animals · 🛡️×${r.sec}</div></div>
+      <div class="title" style="color:var(--gold)">${fmt(r.sc)} pts</div></div>`).join('');
+}
+function renderLog(){
+  document.getElementById('log-list').innerHTML=
+    S.log.map(l=>`<div>${l.html}</div>`).join('')||'<div>Nothing yet — go explore!</div>';
+}
+function updateHud(){
+  document.getElementById('hud-coins').textContent=fmt(S.coins);
+  document.getElementById('hud-level').textContent=levelOf(S.xp);
+  document.getElementById('hud-sec').textContent=S.security;
+}
+let activeTab='world';
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  activeTab=b.dataset.tab;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  if(activeTab!=='world'){
+    document.getElementById('page-'+activeTab).style.display='block';
+    if(activeTab==='zoo')renderZoo();
+    if(activeTab==='shop')renderShop();
+    if(activeTab==='rivals')renderRivals();
+    if(activeTab==='log')renderLog();
+  }
+});
+document.getElementById('btn-sound').addEventListener('click',e=>{
+  S.muted=!S.muted;e.target.textContent=S.muted?'🔇':'🔊';save();
+});
+let hardPaused=false;
+document.getElementById('btn-pause').addEventListener('click',e=>{
+  hardPaused=!hardPaused;e.target.textContent=hardPaused?'▶️':'⏸';
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
+
+// ── Offline progress ─────────────────────────────────────────
+function applyOffline(){
+  const away=Math.min(now()-(S.lastSeen||now()),8*3600e3);
+  if(away>60e3){
+    const earned=Math.floor(score(S.animals)/60*(away/1000));
+    S.coins+=earned;
+    const rivalCatches=Math.min(Math.floor(away/90e3),20);
+    for(let i=0;i<rivalCatches;i++)S.rivals[(rnd()*7)|0].animals.push(randomAnimal());
+    if(earned>0)logEvent(`💤 While you were away, your zoo earned <b>${earned} 🪙</b>.`,true);
+  }
+  // timers stored as absolute times could be far past — clamp future timers
+  const t=now();
+  S.nextSpawn=Math.min(S.nextSpawn,t+5e3);S.nextMyth=Math.min(S.nextMyth,t+300e3);
+  for(const rv of S.rivals){rv.nextCap=Math.min(rv.nextCap,t+60e3);rv.nextRob=Math.min(rv.nextRob,t+180e3);}
+}
+
+// ── Main loop ────────────────────────────────────────────────
+let last=0,perf=0,saveT=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  perf=ts;
+  const dt=Math.min((ts-last)/1000,0.05);last=ts;
+  if(!S)return;
+  tickMeter(dt);
+  if(!paused&&!hardPaused&&!document.hidden){
+    playerInput(dt);
+    tickSpawns();
+    tickRivals(dt);
+    tickEconomy(dt);
+    tickProximity();
+  }
+  if(activeTab==='world')draw();
+  saveT+=dt;if(saveT>5){saveT=0;save();}
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+function boot(){
+  if(!load())newGame();
+  grid=buildTerrain(S.seed);
+  if(!passable(grid,S.py,S.px)){S.px=ZOO_POS[0].c+0.5;S.py=ZOO_POS[0].r+0.5;}
+  applyOffline();
+  updateHud();resize();
+  document.getElementById('btn-sound').textContent=S.muted?'🔇':'🔊';
+  if(!S.tutorialDone){
+    S.tutorialDone=true;
+    showBanner('🐾 <b>Welcome to ZooWorld!</b> Hold anywhere to walk. Catch animals, rob rivals, defend your zoo!');
+  }
+  requestAnimationFrame(loop);
+}
+window.GAME={get S(){return S},RAR,SPECIES,score,levelOf,newGame:()=>{localStorage.removeItem(SAVE_KEY);location.reload();}};
+boot();
+</script>
+</body>
+</html>

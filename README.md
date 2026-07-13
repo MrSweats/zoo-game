@@ -1,6 +1,18 @@
 # 🦁 ZooWorld
 
-A multiplayer zoo-collecting game played **entirely through GitHub issue comments** — perfect for the GitHub mobile app. Build your zoo, explore a ring-road world, capture rare animals, and steal from your rivals.
+A zoo-collecting game: explore a ring-road world with 8 zoos, capture rare animals and special editions, and steal from rival zoos.
+
+## ▶️ Play it now
+
+**https://mrsweats.github.io/zoo-game/** — works great on your phone. Hold anywhere to walk, catch animals, rob the 7 AI zookeepers, and defend your own zoo. Progress saves automatically on your device.
+
+The game lives in [`web/index.html`](web/index.html) (single file, no dependencies) and deploys to GitHub Pages automatically on every push to `main`.
+
+---
+
+## Bonus mode: play by GitHub issue comments
+
+The same world also exists as a **real 8-player multiplayer game played entirely through GitHub issue comments** — perfect for playing with friends via the GitHub mobile app.
 
 ```
 🟩🟩🌲🌾🟩🌵🟩🟩🟩🌴🟩
