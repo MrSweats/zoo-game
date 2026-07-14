@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>🦁 ZooWorld 3D</title>
+<title>🦁 ZooWorld</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦁</text></svg>">
 <style>
   :root {
@@ -19,7 +19,6 @@
   #game { position: fixed; inset: 0; }
   #game canvas { display: block; }
 
-  /* ── Rotate prompt (portrait) ── */
   #rotate {
     position: fixed; inset: 0; z-index: 100; background: #12241a;
     display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -29,18 +28,25 @@
   @keyframes rot { 0%,20% { transform: rotate(0) } 60%,100% { transform: rotate(90deg) } }
   @media (orientation: portrait) { #rotate { display: flex; } }
 
-  /* ── HUD ── */
+  #loading {
+    position: fixed; inset: 0; z-index: 90; background: #12241a;
+    display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  }
+  #loading .sp { font-size: 52px; animation: bounce 1s ease-in-out infinite; }
+  @keyframes bounce { 50% { transform: translateY(-14px) } }
+
   .chip {
     background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px;
     padding: 6px 12px; font-weight: 800; font-size: 14px; backdrop-filter: blur(4px);
   }
   #hud {
     position: fixed; top: calc(8px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
-    display: flex; gap: 8px; z-index: 10;
+    display: flex; gap: 8px; z-index: 10; align-items: center;
   }
+  #hud-wanted { color: var(--danger); font-size: 12px; }
   #menu {
     position: fixed; top: calc(8px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right));
-    display: flex; gap: 8px; z-index: 35; /* stays clickable above the side panel */
+    display: flex; gap: 8px; z-index: 35;
   }
   .iconbtn {
     background: var(--panel); border: 1.5px solid var(--line); color: var(--text);
@@ -49,29 +55,61 @@
   .iconbtn.active { border-color: var(--accent); }
 
   #banner {
-    position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    position: fixed; top: calc(48px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
     background: var(--panel); border: 2px solid var(--gold);
     padding: 8px 16px; border-radius: 12px; font-weight: 700; font-size: 13.5px;
-    max-width: min(560px, 60vw); text-align: center; display: none; z-index: 20; pointer-events: none;
+    max-width: min(560px, 64vw); text-align: center; display: none; z-index: 20; pointer-events: none;
   }
   #ticker {
-    position: fixed; bottom: calc(8px + env(safe-area-inset-bottom)); left: calc(10px + env(safe-area-inset-left));
+    position: fixed; bottom: calc(8px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
     background: var(--panel); border: 1.5px solid var(--line);
     padding: 5px 10px; border-radius: 10px; font-size: 12px; color: var(--dim);
-    max-width: 46vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 52vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     z-index: 10; pointer-events: none;
   }
+  #carrychip {
+    position: fixed; top: calc(48px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
+    background: var(--panel); border: 1.5px solid var(--gold); border-radius: 10px;
+    padding: 5px 10px; font-size: 12.5px; display: none; z-index: 10; pointer-events: none; max-width: 40vw;
+  }
+  #toast {
+    position: fixed; bottom: calc(140px + env(safe-area-inset-bottom)); right: calc(24px + env(safe-area-inset-right));
+    background: var(--panel); border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 7px 12px; font-size: 13px; font-weight: 700; display: none; z-index: 12; pointer-events: none;
+    max-width: 40vw;
+  }
+
   #actionbtn {
     position: fixed; right: calc(24px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom));
-    width: 92px; height: 92px; border-radius: 50%; border: 4px solid #fff3;
+    width: 96px; height: 96px; border-radius: 50%; border: 4px solid #fff3;
     background: radial-gradient(circle at 35% 30%, #ffe08a, var(--gold));
     color: #3a2b00; font-size: 13px; font-weight: 900; cursor: pointer;
     box-shadow: 0 6px 20px rgba(0,0,0,.5); display: none; z-index: 10; line-height: 1.15;
   }
-  #actionbtn .big { font-size: 26px; display: block; }
   #actionbtn:active { transform: scale(.93); }
+  #ab-emoji { font-size: 28px; display: block; }
+  #dropbtn {
+    position: fixed; right: calc(38px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom));
+    width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff3;
+    background: var(--panel); color: var(--text); font-size: 12px; font-weight: 800;
+    display: none; z-index: 10; cursor: pointer;
+  }
+  #sprintbtn {
+    position: fixed; left: calc(24px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom));
+    width: 84px; height: 84px; border-radius: 50%; border: 4px solid #fff3;
+    background: radial-gradient(circle at 35% 30%, #9fe08a, #57b34e);
+    color: #12300f; font-size: 12px; font-weight: 900; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0,0,0,.5); z-index: 10; line-height: 1.1;
+  }
+  #sprintbtn:active { transform: scale(.93); }
+  #sprintbtn .big { font-size: 24px; display: block; }
+  #stambar {
+    position: fixed; left: calc(16px + env(safe-area-inset-left)); bottom: calc(118px + env(safe-area-inset-bottom));
+    width: 100px; height: 10px; background: rgba(0,0,0,.4); border: 1.5px solid var(--line);
+    border-radius: 6px; overflow: hidden; z-index: 10;
+  }
+  #stamfill { height: 100%; width: 100%; background: linear-gradient(90deg, #57b34e, #9fe08a); }
 
-  /* ── Joystick ── */
   #joy { position: fixed; width: 120px; height: 120px; border-radius: 50%;
     background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.25);
     display: none; z-index: 9; pointer-events: none; }
@@ -79,78 +117,63 @@
     border-radius: 50%; background: rgba(255,255,255,.35); border: 2px solid rgba(255,255,255,.5);
     transform: translate(-50%,-50%); }
 
-  /* ── Side panel ── */
   #sidepanel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 46vw);
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(380px, 48vw);
     background: rgba(14, 22, 16, .96); border-left: 2px solid var(--line); z-index: 30;
     transform: translateX(105%); transition: transform .22s ease; display: flex; flex-direction: column;
     padding-top: env(safe-area-inset-top); padding-right: env(safe-area-inset-right);
   }
   #sidepanel.open { transform: translateX(0); }
-  #sp-head { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1.5px solid var(--line); margin-top: 44px; }
-  #sp-title { font-weight: 800; font-size: 16px; flex: 1; }
+  #sp-head { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1.5px solid var(--line); margin-top: 42px; }
+  #sp-title { font-weight: 800; font-size: 15px; flex: 1; }
   #sp-close { background: none; border: none; color: var(--dim); font-size: 22px; cursor: pointer; padding: 2px 8px; }
   #sp-body { flex: 1; overflow-y: auto; padding: 12px; touch-action: pan-y; }
   .card {
     background: rgba(38, 58, 40, .8); border: 1.5px solid var(--line); border-radius: 14px;
-    padding: 10px 12px; margin-bottom: 9px; display: flex; align-items: center; gap: 11px;
+    padding: 9px 11px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
   }
-  .card .big { font-size: 27px; }
+  .card .big { font-size: 26px; }
   .card .grow { flex: 1; min-width: 0; }
-  .card .title { font-weight: 700; font-size: 14px; }
-  .card .sub { color: var(--dim); font-size: 12px; margin-top: 2px; }
+  .card .title { font-weight: 700; font-size: 13.5px; }
+  .card .sub, .sub { color: var(--dim); font-size: 12px; margin-top: 2px; }
   .buy { background: var(--accent); color: #143016; border: none; border-radius: 10px;
-    font-weight: 800; font-size: 13px; padding: 8px 11px; cursor: pointer; white-space: nowrap; }
+    font-weight: 800; font-size: 12.5px; padding: 7px 10px; cursor: pointer; white-space: nowrap; }
   .buy:disabled { background: #2f4732; color: var(--dim); }
-  #sp-body .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 7px; }
-  .acard { background: rgba(38,58,40,.8); border: 2px solid var(--line); border-radius: 12px; padding: 7px 3px; text-align: center; }
-  .acard .em { font-size: 27px; } .acard .nm { font-size: 11px; font-weight: 700; margin-top: 2px; }
-  .acard .rt { font-size: 9.5px; margin-top: 1px; }
+  .buy.alt { background: #2f4732; color: var(--text); border: 1.5px solid var(--line); }
+  .buy.wide { width: 100%; padding: 12px; font-size: 14px; }
+  .buy.danger { background: var(--danger); color: #330d0d; }
   .logrow { padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--dim); }
   .logrow b { color: var(--text); }
-
-  /* ── Modal ── */
-  #modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.55);
-    display: none; align-items: center; justify-content: center; z-index: 40; padding: 16px; }
-  #modal { background: rgba(18,28,20,.97); border: 2.5px solid var(--line); border-radius: 18px;
-    width: 100%; max-width: 380px; padding: 16px; text-align: center; }
-  #modal .em { font-size: 52px; }
-  #modal h3 { font-size: 18px; margin: 4px 0 2px; }
-  #modal .sub { color: var(--dim); font-size: 12.5px; margin-bottom: 10px; }
-  #meter { height: 26px; background: #2f4732; border: 2px solid var(--line); border-radius: 13px;
-    position: relative; overflow: hidden; margin: 10px 0; display: none; }
-  #meter .zone { position: absolute; top: 0; bottom: 0; background: rgba(126,217,87,.45); }
-  #meter .perfect { position: absolute; top: 0; bottom: 0; background: var(--gold); opacity: .85; }
-  #meter .mark { position: absolute; top: -2px; bottom: -2px; width: 4px; background: #fff; border-radius: 2px; }
-  #modal .result { font-size: 14px; font-weight: 700; margin: 6px 0; min-height: 20px; }
-  #modal .row { display: flex; gap: 10px; justify-content: center; margin-top: 6px; }
-  #modal button { border: none; border-radius: 12px; font-weight: 800; font-size: 15px;
-    padding: 12px 18px; cursor: pointer; flex: 1; }
-  #modal .primary { background: var(--accent); color: #143016; }
-  #modal .ghost { background: #2f4732; color: var(--text); border: 2px solid var(--line); }
-  .badge { font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 8px; display: inline-block; color: #14231a; }
 </style>
 </head>
 <body>
   <div id="game"></div>
   <div id="rotate"><div class="ph">📱</div><div style="font-size:18px;font-weight:800">Rotate your phone</div><div style="color:var(--dim)">ZooWorld is a landscape game 🌄</div></div>
+  <div id="loading"><div class="sp">🦁</div><div id="loading-msg" style="font-weight:700">Loading...</div></div>
 
   <div id="hud">
     <span class="chip">🪙 <span id="hud-coins">0</span></span>
-    <span class="chip">⭐ Lv <span id="hud-level">1</span></span>
-    <span class="chip">🛡️×<span id="hud-sec">0</span></span>
+    <span class="chip">⭐ <span id="hud-level">1</span></span>
+    <span class="chip">🏠 <span id="hud-pens">0/6</span></span>
+    <span class="chip" id="hud-wanted"></span>
   </div>
   <div id="menu">
     <button class="iconbtn" data-panel="zoo">🏛️</button>
     <button class="iconbtn" data-panel="shop">🏪</button>
     <button class="iconbtn" data-panel="rivals">🏆</button>
     <button class="iconbtn" data-panel="log">📜</button>
+    <button class="iconbtn" data-panel="mp">🌐</button>
     <button class="iconbtn" id="btn-sound">🔊</button>
     <button class="iconbtn" id="btn-pause">⏸</button>
   </div>
   <div id="banner"></div>
-  <div id="ticker">Welcome to ZooWorld! Touch and drag to move 🕹️</div>
-  <button id="actionbtn"><span class="big">🐾</span><span id="ab-label">Capture</span></button>
+  <div id="carrychip"></div>
+  <div id="ticker">Welcome to ZooWorld! Touch & drag to move 🕹️</div>
+  <div id="toast"></div>
+  <button id="actionbtn"><span id="ab-emoji">🐾</span><span id="ab-label">Do</span></button>
+  <button id="dropbtn">🫳<br>Drop</button>
+  <button id="sprintbtn"><span class="big">💨</span>SPRINT</button>
+  <div id="stambar"><div id="stamfill"></div></div>
   <div id="joy"><div id="joy-knob"></div></div>
 
   <div id="sidepanel">
@@ -158,686 +181,7 @@
     <div id="sp-body"></div>
   </div>
 
-  <div id="modal-back"><div id="modal">
-    <div class="em" id="m-em">🦊</div>
-    <h3 id="m-title">Fox</h3>
-    <div class="sub" id="m-sub"></div>
-    <div id="meter"><div class="zone"></div><div class="perfect"></div><div class="mark"></div></div>
-    <div class="result" id="m-result"></div>
-    <div class="row">
-      <button class="ghost" id="m-cancel">Leave</button>
-      <button class="primary" id="m-go">Capture</button>
-    </div>
-  </div></div>
-
-<script type="module">
-import * as THREE from './lib/three.module.min.js';
-// ════════════════════════════════════════════════════════════
-// ZooWorld 3D — landscape zoo-collecting sandbox.
-// Touch: a joystick appears under your finger. Desktop: WASD.
-// ════════════════════════════════════════════════════════════
-
-// ── Data ─────────────────────────────────────────────────────
-const RAR = {
-  common:    { label: 'Common',    color: '#b9c6b3', hex: 0xb9c6b3, chance: 0.90, value: 1,   xp: 1 },
-  uncommon:  { label: 'Uncommon',  color: '#7ed957', hex: 0x7ed957, chance: 0.72, value: 3,   xp: 3 },
-  rare:      { label: 'Rare',      color: '#6ec6ff', hex: 0x6ec6ff, chance: 0.52, value: 8,   xp: 8 },
-  epic:      { label: 'Epic',      color: '#c792ea', hex: 0xc792ea, chance: 0.34, value: 20,  xp: 20 },
-  legendary: { label: 'Legendary', color: '#ffd166', hex: 0xffd166, chance: 0.20, value: 50,  xp: 50 },
-  mythical:  { label: 'MYTHICAL',  color: '#ff6b6b', hex: 0xff6b6b, chance: 0.12, value: 150, xp: 120 },
-};
-const SPAWN_TABLE = [['common',.46],['uncommon',.27],['rare',.16],['epic',.08],['legendary',.027],['mythical',.003]];
-const VARIANTS = [
-  { key:'golden', label:'Golden', badge:'🌟', chance:0.01, mult:20 },
-  { key:'shiny',  label:'Shiny',  badge:'✨', chance:0.04, mult:5 },
-];
-const SPECIES = [
-  ['🐇','Rabbit','common'],['🐿️','Squirrel','common'],['🐀','Rat','common'],['🐁','Mouse','common'],
-  ['🐓','Rooster','common'],['🐤','Chick','common'],['🦆','Duck','common'],['🐸','Frog','common'],
-  ['🐌','Snail','common'],['🐝','Bee','common'],['🐖','Pig','common'],['🐑','Sheep','common'],
-  ['🐐','Goat','common'],['🐄','Cow','common'],['🐈','Cat','common'],['🕊️','Dove','common'],
-  ['🦊','Fox','uncommon'],['🦝','Raccoon','uncommon'],['🦔','Hedgehog','uncommon'],['🦇','Bat','uncommon'],
-  ['🦉','Owl','uncommon'],['🦅','Eagle','uncommon'],['🦢','Swan','uncommon'],['🦜','Parrot','uncommon'],
-  ['🐢','Turtle','uncommon'],['🐍','Snake','uncommon'],['🦎','Lizard','uncommon'],['🐠','Tropical Fish','uncommon'],
-  ['🦀','Crab','uncommon'],['🐙','Octopus','uncommon'],['🦌','Deer','uncommon'],['🐗','Boar','uncommon'],
-  ['🦃','Turkey','uncommon'],['🦚','Peacock','uncommon'],
-  ['🐺','Wolf','rare'],['🐆','Leopard','rare'],['🐊','Crocodile','rare'],['🦈','Shark','rare'],
-  ['🐬','Dolphin','rare'],['🦭','Seal','rare'],['🐧','Penguin','rare'],['🦩','Flamingo','rare'],
-  ['🦥','Sloth','rare'],['🦦','Otter','rare'],['🦨','Skunk','rare'],['🦡','Badger','rare'],
-  ['🐫','Camel','rare'],['🦙','Llama','rare'],['🦘','Kangaroo','rare'],['🐒','Monkey','rare'],
-  ['🦁','Lion','epic'],['🐯','Tiger','epic'],['🐻','Bear','epic'],['🐨','Koala','epic'],
-  ['🦍','Gorilla','epic'],['🦧','Orangutan','epic'],['🐘','Elephant','epic'],['🦏','Rhino','epic'],
-  ['🦛','Hippo','epic'],['🦒','Giraffe','epic'],['🦓','Zebra','epic'],['🐼','Panda','epic'],['🐋','Whale','epic'],
-  ['🦕','Brontosaurus','legendary'],['🦖','T-Rex','legendary'],['🦤','Dodo','legendary'],['🦣','Mammoth','legendary'],
-  ['🐉','Dragon','mythical'],['🦄','Unicorn','mythical'],['🐲','Drake','mythical'],['🦑','Kraken','mythical'],
-].map(([emoji,name,rarity]) => ({ emoji, name, rarity }));
-const RIVAL_DEFS = [
-  { name:'Mabel', avatar:'👵', roof:0xe86a6a }, { name:'Ravi',  avatar:'👳', roof:0x6a9de8 },
-  { name:'Zara',  avatar:'🧕', roof:0x9d6ae8 }, { name:'Bruno', avatar:'🧔', roof:0x6ae8b2 },
-  { name:'Suki',  avatar:'👧', roof:0xe86ac8 }, { name:'Otto',  avatar:'👴', roof:0xe8b26a },
-  { name:'Nadia', avatar:'👩', roof:0x6ae8e0 },
-];
-const PLAYER_EMOJI = '🤠';
-
-// ── World geometry (units; 1 tile = 2u, 21x21 tiles) ─────────
-const U = 2, WORLD = 21 * U;                 // 42 x 42 units
-const RD_MIN = 3.5 * U, RD_MAX = 17.5 * U;   // ring road center-lines
-const ROAD_W = 2.4;
-const ZOOS = [ [3,3],[3,10],[3,17],[10,17],[17,17],[17,10],[17,3],[10,3] ]
-  .map(([r,c]) => ({ x: c*U + 1, z: r*U + 1 }));
-
-const rnd = Math.random;
-const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-function rollRarity(){let x=rnd();for(const[k,p]of SPAWN_TABLE){if(x<p)return k;x-=p;}return 'common';}
-function rollSpecies(){const t=rollRarity();const pool=SPECIES.filter(s=>s.rarity===t);return pool[(rnd()*pool.length)|0];}
-function rollVariant(){const x=rnd();let a=0;for(const v of VARIANTS){a+=v.chance;if(x<a)return v.key;}return null;}
-function vinfo(k){return VARIANTS.find(v=>v.key===k)||null;}
-function aValue(a){const v=vinfo(a.variant);return RAR[a.rarity].value*(v?v.mult:1);}
-function aLabel(a){const v=vinfo(a.variant);return `${v?v.badge:''}${a.emoji} ${v?v.label+' ':''}${a.name}`;}
-function score(list){return list.reduce((s,a)=>s+aValue(a),0);}
-function levelOf(xp){return 1+Math.floor(Math.sqrt(xp/10));}
-function fmt(n){return n>=1000?(n/1000).toFixed(1)+'k':Math.floor(n);}
-function now(){return Date.now();}
-function randomAnimal(tier){
-  const pool=tier?SPECIES.filter(s=>s.rarity===tier):null;
-  const sp=pool?pool[(rnd()*pool.length)|0]:rollSpecies();
-  return {...sp, variant: rollVariant()};
-}
-
-// ── State ────────────────────────────────────────────────────
-const SAVE_KEY='zooworld-3d-v1';
-let S=null;
-function newGame(){
-  const starter=randomAnimal('common');starter.variant=null;
-  S={
-    coins:30, xp:0, security:0, gear:{net:false,tranq:false},
-    animals:[starter], px:ZOOS[0].x, pz:ZOOS[0].z+2.2,
-    heistLockUntil:0, heistCoolUntil:0,
-    rivals:RIVAL_DEFS.map((d,i)=>({
-      name:d.name, avatar:d.avatar, zoo:i+1,
-      x:ZOOS[i+1].x, z:ZOOS[i+1].z+2, tx:ZOOS[i+1].x, tz:ZOOS[i+1].z+2,
-      animals:[randomAnimal('common')], security:(rnd()*2)|0,
-      nextCap:now()+30e3+rnd()*90e3, nextRob:now()+120e3+rnd()*240e3,
-    })),
-    spawns:[], nextSpawnAt:0, nextMythAt:now()+240e3+rnd()*360e3, spawnSeq:1,
-    log:[], muted:false, lastSeen:now(), welcomed:false,
-  };
-}
-function save(){S.lastSeen=now();try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
-function load(){try{const r=localStorage.getItem(SAVE_KEY);if(!r)return false;S=JSON.parse(r);return true;}catch(e){return false;}}
-
-// ── Audio ────────────────────────────────────────────────────
-let AC=null;
-function beep(f,d=0.09,t='square',v=0.045){
-  if(S.muted)return;
-  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();
-    const o=AC.createOscillator(),g=AC.createGain();
-    o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);
-    o.start();g.gain.exponentialRampToValueAtTime(1e-4,AC.currentTime+d);o.stop(AC.currentTime+d);}catch(e){}
-}
-const sfx={coin:()=>beep(880,.06,'sine'),good:()=>{beep(660,.1);setTimeout(()=>beep(990,.12),90);},
-  great:()=>{beep(660,.08);setTimeout(()=>beep(880,.08),80);setTimeout(()=>beep(1320,.16),160);},
-  bad:()=>beep(170,.2,'sawtooth'),alert:()=>{beep(520,.1);setTimeout(()=>beep(390,.15),110);}};
-
-// ── Log / banner ─────────────────────────────────────────────
-function logEvent(html,important){
-  S.log.unshift({t:now(),html});if(S.log.length>60)S.log.pop();
-  document.getElementById('ticker').innerHTML=html;
-  if(important)showBanner(html);
-  if(openPanel==='log')renderPanel('log');
-}
-let bannerT=null;
-function showBanner(html){
-  const b=document.getElementById('banner');b.innerHTML=html;b.style.display='block';
-  clearTimeout(bannerT);bannerT=setTimeout(()=>b.style.display='none',5200);
-}
-
-// ── Three.js scene ───────────────────────────────────────────
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
-renderer.setClearColor(0x9fd9ff);
-document.getElementById('game').appendChild(renderer.domElement);
-const scene=new THREE.Scene();
-scene.fog=new THREE.Fog(0x9fd9ff,34,74);
-const camera=new THREE.PerspectiveCamera(50,2,.1,200);
-scene.add(new THREE.HemisphereLight(0xcfeaff,0x5aa04a,1.05));
-const sun=new THREE.DirectionalLight(0xfff2cc,1.5);sun.position.set(24,36,14);scene.add(sun);
-
-function onResize(){
-  const w=innerWidth,h=innerHeight;
-  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
-}
-addEventListener('resize',onResize);onResize();
-
-// canvas-texture sprites (emoji render natively — crisp on every device)
-function makeSprite(draw,scale=2,w=128,h=128){
-  const c=document.createElement('canvas');c.width=w;c.height=h;
-  draw(c.getContext('2d'));
-  const tex=new THREE.CanvasTexture(c);
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));
-  s.scale.set(scale,scale*h/w,1);return s;
-}
-function emojiSprite(emoji,scale=2,label=null){
-  return makeSprite(g=>{
-    g.textAlign='center';g.textBaseline='middle';
-    g.font='88px serif';g.fillText(emoji,64,label?54:66);
-    if(label){g.font='bold 21px sans-serif';g.lineWidth=5;g.strokeStyle='rgba(0,0,0,.75)';
-      g.fillStyle='#fff';g.strokeText(label,64,116);g.fillText(label,64,116);}
-  },scale);
-}
-function blobShadow(r=0.55,op=0.28){
-  const m=new THREE.Mesh(new THREE.CircleGeometry(r,20),
-    new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:op,depthWrite:false}));
-  m.rotation.x=-Math.PI/2;m.position.y=0.02;return m;
-}
-function ring(r,color,op=0.6){
-  const m=new THREE.Mesh(new THREE.RingGeometry(r*0.72,r,26),
-    new THREE.MeshBasicMaterial({color,transparent:true,opacity:op,depthWrite:false,side:THREE.DoubleSide}));
-  m.rotation.x=-Math.PI/2;m.position.y=0.04;return m;
-}
-
-// terrain
-const ponds=[];
-{
-  const ground=new THREE.Mesh(new THREE.PlaneGeometry(WORLD+60,WORLD+60),
-    new THREE.MeshLambertMaterial({color:0x79c04f}));
-  ground.rotation.x=-Math.PI/2;ground.position.set(WORLD/2,0,WORLD/2);scene.add(ground);
-  // mowed patches for texture
-  for(let i=0;i<60;i++){
-    const p=new THREE.Mesh(new THREE.CircleGeometry(1+rnd()*2.4,14),
-      new THREE.MeshLambertMaterial({color:rnd()<.5?0x71b748:0x82ca58}));
-    p.rotation.x=-Math.PI/2;p.position.set(rnd()*WORLD,0.01,rnd()*WORLD);scene.add(p);
-  }
-  // ring road
-  const roadMat=new THREE.MeshLambertMaterial({color:0xd9b98c});
-  const mk=(w,d,x,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,.06,d),roadMat);m.position.set(x,.03,z);scene.add(m);};
-  const len=RD_MAX-RD_MIN+ROAD_W;
-  mk(len,ROAD_W,(RD_MIN+RD_MAX)/2,RD_MIN); mk(len,ROAD_W,(RD_MIN+RD_MAX)/2,RD_MAX);
-  mk(ROAD_W,len,RD_MIN,(RD_MIN+RD_MAX)/2); mk(ROAD_W,len,RD_MAX,(RD_MIN+RD_MAX)/2);
-  // ponds (impassable)
-  let n=0;
-  while(n<4){
-    const x=6+rnd()*(WORLD-12),z=6+rnd()*(WORLD-12);
-    if(Math.abs(x-RD_MIN)<3||Math.abs(x-RD_MAX)<3||Math.abs(z-RD_MIN)<3||Math.abs(z-RD_MAX)<3)continue;
-    if(ZOOS.some(zz=>Math.hypot(zz.x-x,zz.z-z)<6))continue;
-    const r=1.6+rnd()*1.2;
-    const w=new THREE.Mesh(new THREE.CircleGeometry(r,22),new THREE.MeshLambertMaterial({color:0x4aa3df}));
-    w.rotation.x=-Math.PI/2;w.position.set(x,0.02,z);scene.add(w);
-    ponds.push({x,z,r});n++;
-  }
-  // trees / rocks / flowers
-  const trunkM=new THREE.MeshLambertMaterial({color:0x8a5a2b});
-  const leafM=[0x2f8f3e,0x3aa04a,0x27753a].map(c=>new THREE.MeshLambertMaterial({color:c}));
-  const rockM=new THREE.MeshLambertMaterial({color:0x9aa0a6});
-  for(let i=0;i<90;i++){
-    const x=1+rnd()*(WORLD-2),z=1+rnd()*(WORLD-2);
-    if(Math.abs(x-RD_MIN)<2.2||Math.abs(x-RD_MAX)<2.2||Math.abs(z-RD_MIN)<2.2||Math.abs(z-RD_MAX)<2.2)
-      if(x>RD_MIN-2.2&&x<RD_MAX+2.2&&z>RD_MIN-2.2&&z<RD_MAX+2.2)continue;
-    if(ZOOS.some(zz=>Math.hypot(zz.x-x,zz.z-z)<3.4))continue;
-    if(ponds.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+1.2))continue;
-    const kind=rnd();
-    if(kind<0.62){ // tree
-      const g=new THREE.Group();
-      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,.9,7),trunkM);trunk.position.y=.45;
-      const s=0.8+rnd()*0.9;
-      const leaf=new THREE.Mesh(new THREE.ConeGeometry(.85*s,1.7*s,8),leafM[(rnd()*3)|0]);leaf.position.y=.9+.85*s;
-      g.add(trunk,leaf);g.position.set(x,0,z);scene.add(g);
-    }else if(kind<0.8){ // rock
-      const m=new THREE.Mesh(new THREE.DodecahedronGeometry(.32+rnd()*.3),rockM);
-      m.position.set(x,.25,z);m.rotation.set(rnd()*3,rnd()*3,rnd()*3);scene.add(m);
-    }else{ // bush / flower
-      const m=new THREE.Mesh(new THREE.SphereGeometry(.3+rnd()*.25,8,6),
-        new THREE.MeshLambertMaterial({color:rnd()<.6?0x3aa04a:(rnd()<.5?0xff8fc0:0xffe08a)}));
-      m.position.set(x,.24,z);scene.add(m);
-    }
-  }
-}
-// zoo compounds
-const fenceM=new THREE.MeshLambertMaterial({color:0xf5f0e6});
-const wallM=new THREE.MeshLambertMaterial({color:0xf2e2c4});
-for(let i=0;i<8;i++){
-  const zp=ZOOS[i],g=new THREE.Group();
-  const roofC=i===0?0xffd166:RIVAL_DEFS[i-1].roof;
-  const base=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.3,1.9),wallM);base.position.y=.65;
-  const roof=new THREE.Mesh(new THREE.ConeGeometry(1.9,1.15,4),new THREE.MeshLambertMaterial({color:roofC}));
-  roof.position.y=1.9;roof.rotation.y=Math.PI/4;
-  g.add(base,roof);
-  for(const[dx,dz,w,d]of[[0,-2.3,5,.14],[0,2.3,5,.14],[-2.5,0,.14,4.7],[2.5,0,.14,4.7]]){
-    const f=new THREE.Mesh(new THREE.BoxGeometry(w,.7,d),fenceM);f.position.set(dx,.35,dz);g.add(f);
-  }
-  const sign=emojiSprite(i===0?'⭐':'🚩',2.3,i===0?'YOUR ZOO':RIVAL_DEFS[i-1].name+"'s zoo");
-  sign.position.y=3.4;g.add(sign);
-  g.position.set(zp.x,0,zp.z);scene.add(g);
-}
-
-// entities
-const playerG=new THREE.Group();
-const playerSpr=emojiSprite(PLAYER_EMOJI,2.0);playerSpr.position.y=1.15;
-playerG.add(playerSpr,blobShadow(.6),ring(.85,0xffd166,.8));
-scene.add(playerG);
-const rivalGs=RIVAL_DEFS.map(d=>{
-  const g=new THREE.Group();
-  const spr=emojiSprite(d.avatar,1.9,d.name);spr.position.y=1.15;
-  g.add(spr,blobShadow(.55));scene.add(g);return g;
-});
-const spawnGs=new Map(); // id -> group
-function addSpawnMesh(sp){
-  const g=new THREE.Group();
-  const spr=emojiSprite(sp.emoji,sp.rarity==='mythical'?2.5:1.8);spr.position.y=1.0;
-  g.add(spr,blobShadow(.5));
-  if(sp.rarity!=='common')g.add(ring(.8,RAR[sp.rarity].hex,.75));
-  g.position.set(sp.x,0,sp.z);scene.add(g);spawnGs.set(sp.id,g);
-}
-function removeSpawnMesh(id){const g=spawnGs.get(id);if(g){scene.remove(g);spawnGs.delete(id);}}
-
-// ── Movement / collision ─────────────────────────────────────
-function blocked(x,z){
-  if(x<1.2||z<1.2||x>WORLD-1.2||z>WORLD-1.2)return true;
-  for(const p of ponds)if(Math.hypot(p.x-x,p.z-z)<p.r+.45)return true;
-  for(const zp of ZOOS)if(Math.hypot(zp.x-x,zp.z-z)<1.45)return true; // building
-  return false;
-}
-function tryMove(o,xk,zk,dx,dz){
-  if(!blocked(o[xk]+dx,o[zk]))o[xk]+=dx;
-  if(!blocked(o[xk],o[zk]+dz))o[zk]+=dz;
-}
-
-// ── Input: joystick under finger + WASD ──────────────────────
-const joyEl=document.getElementById('joy'),knob=document.getElementById('joy-knob');
-let joy={active:false,id:null,cx:0,cy:0,vx:0,vy:0};
-const gameEl=renderer.domElement;
-gameEl.addEventListener('pointerdown',e=>{
-  if(joy.active)return;
-  joy={active:true,id:e.pointerId,cx:e.clientX,cy:e.clientY,vx:0,vy:0};
-  joyEl.style.display='block';
-  joyEl.style.left=(e.clientX-60)+'px';joyEl.style.top=(e.clientY-60)+'px';
-  knob.style.transform='translate(-50%,-50%)';
-  gameEl.setPointerCapture(e.pointerId);
-});
-gameEl.addEventListener('pointermove',e=>{
-  if(!joy.active||e.pointerId!==joy.id)return;
-  let dx=e.clientX-joy.cx,dy=e.clientY-joy.cy;
-  const d=Math.hypot(dx,dy),max=48;
-  if(d>max){dx=dx/d*max;dy=dy/d*max;}
-  joy.vx=dx/max;joy.vy=dy/max;
-  knob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-});
-function joyEnd(e){
-  if(e.pointerId!==joy.id)return;
-  joy={active:false,id:null,vx:0,vy:0};joyEl.style.display='none';
-}
-gameEl.addEventListener('pointerup',joyEnd);
-gameEl.addEventListener('pointercancel',joyEnd);
-const keys={};
-addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
-addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-
-let moving=false;
-function playerInput(dt){
-  let dx=joy.vx,dz=joy.vy;
-  if(keys.w||keys.arrowup)dz-=1; if(keys.s||keys.arrowdown)dz+=1;
-  if(keys.a||keys.arrowleft)dx-=1; if(keys.d||keys.arrowright)dx+=1;
-  const l=Math.hypot(dx,dz);
-  moving=l>0.12;
-  if(!moving)return;
-  dx/=Math.max(l,1);dz/=Math.max(l,1);
-  const sp=6.4*dt;
-  tryMove(S,'px','pz',dx*sp,dz*sp);
-}
-
-// ── Spawning ─────────────────────────────────────────────────
-function spawnAnimal(forceMyth){
-  if(S.spawns.length>=14&&!forceMyth)return null;
-  let x,z,tries=0;
-  do{x=3+rnd()*(WORLD-6);z=3+rnd()*(WORLD-6);tries++;}
-  while(tries<80&&(ponds.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+1)||ZOOS.some(zz=>Math.hypot(zz.x-x,zz.z-z)<3.2)));
-  if(tries>=80)return null;
-  const sp=forceMyth?randomAnimal('mythical'):rollSpecies();
-  const a={id:S.spawnSeq++,emoji:sp.emoji,name:sp.name,rarity:sp.rarity,x,z,tx:x,tz:z,born:now(),wt:now()+1500+rnd()*2500};
-  S.spawns.push(a);addSpawnMesh(a);
-  if(a.rarity==='mythical'){sfx.alert();
-    logEvent(`🚨 <b>A wild ${a.emoji} ${a.name} has appeared!</b> Find it before the rivals do!`,true);}
-  else if(a.rarity==='legendary')
-    logEvent(`👀 A ${a.emoji} <b>${a.name}</b> (Legendary) was spotted somewhere in the world...`);
-  return a;
-}
-function tickSpawns(){
-  const t=now();
-  if(t>S.nextSpawnAt){S.nextSpawnAt=t+7000+rnd()*6000;spawnAnimal(false);}
-  if(t>S.nextMythAt){S.nextMythAt=t+300e3+rnd()*420e3;spawnAnimal(true);}
-  for(let i=S.spawns.length-1;i>=0;i--){
-    const sp=S.spawns[i];
-    if(t-sp.born>(sp.rarity==='mythical'?150e3:100e3)){removeSpawnMesh(sp.id);S.spawns.splice(i,1);continue;}
-    if(t>sp.wt){sp.wt=t+1500+rnd()*2500;
-      const nx=sp.x+(rnd()*2-1)*1.6,nz=sp.z+(rnd()*2-1)*1.6;
-      if(!blocked(nx,nz)){sp.tx=nx;sp.tz=nz;}}
-    const d=Math.hypot(sp.tx-sp.x,sp.tz-sp.z);
-    if(d>0.08){sp.x+=(sp.tx-sp.x)/d*0.028;sp.z+=(sp.tz-sp.z)/d*0.028;}
-  }
-}
-
-// ── Rival AI ─────────────────────────────────────────────────
-function tickRivals(dt){
-  const t=now();
-  for(let i=0;i<S.rivals.length;i++){
-    const rv=S.rivals[i];
-    const d=Math.hypot(rv.tx-rv.x,rv.tz-rv.z);
-    if(d<0.4){
-      let target=null,best=1e9;
-      for(const sp of S.spawns){
-        const dist=Math.hypot(sp.x-rv.x,sp.z-rv.z)-RAR[sp.rarity].value*0.3;
-        if(dist<best){best=dist;target=sp;}
-      }
-      if(target&&rnd()<0.75){rv.tx=target.x;rv.tz=target.z;}
-      else{const zp=ZOOS[(rnd()*8)|0];rv.tx=zp.x+(rnd()*4-2);rv.tz=zp.z+2.6;}
-    }else{
-      const st=3.9*dt;
-      tryMove(rv,'x','z',(rv.tx-rv.x)/d*st,(rv.tz-rv.z)/d*st);
-    }
-    for(let j=S.spawns.length-1;j>=0;j--){
-      const sp=S.spawns[j];
-      if(Math.hypot(sp.x-rv.x,sp.z-rv.z)<1&&t>rv.nextCap){
-        rv.nextCap=t+20e3+rnd()*40e3;
-        if(rnd()<RAR[sp.rarity].chance*0.8){
-          removeSpawnMesh(sp.id);S.spawns.splice(j,1);
-          const a={emoji:sp.emoji,name:sp.name,rarity:sp.rarity,variant:rollVariant()};
-          rv.animals.push(a);
-          if(RAR[sp.rarity].value>=20||a.variant)
-            logEvent(`😤 <b>${rv.name}</b> captured ${aLabel(a)}${sp.rarity==='mythical'?' — a MYTHICAL!':''}!`,sp.rarity==='mythical');
-        }
-      }
-    }
-    if(t>rv.nextCap+60e3){rv.nextCap=t+30e3+rnd()*60e3;rv.animals.push(randomAnimal());}
-    if(t>rv.nextRob){
-      rv.nextRob=t+180e3+rnd()*300e3;
-      if(rnd()<0.5&&S.animals.length>1){
-        const p=clamp(0.4-0.06*S.security,0.05,0.4);
-        if(rnd()<p){
-          const loot=S.animals.splice((rnd()*S.animals.length)|0,1)[0];
-          rv.animals.push(loot);sfx.alert();
-          logEvent(`🚨 <b>${rv.name} robbed your zoo and took ${aLabel(loot)}!</b> Buy 🛡️ security!`,true);
-        }else{sfx.good();
-          logEvent(`😅 <b>${rv.name}</b> tried to rob your zoo — your security caught them!`,true);}
-        updateHud();
-      }else{
-        const others=S.rivals.filter(o=>o!==rv&&o.animals.length>0);
-        if(others.length&&rnd()<0.4){
-          const v=others[(rnd()*others.length)|0];
-          const loot=v.animals.splice((rnd()*v.animals.length)|0,1)[0];
-          rv.animals.push(loot);
-          logEvent(`🥷 <b>${rv.name}</b> stole ${aLabel(loot)} from <b>${v.name}</b>!`);
-        }
-      }
-    }
-    rv.security=Math.min(5,Math.floor(score(rv.animals)/120));
-  }
-}
-
-// ── Economy ──────────────────────────────────────────────────
-let coinCarry=0;
-function tickEconomy(dt){
-  coinCarry+=score(S.animals)/60*dt;
-  if(coinCarry>=1){const add=Math.floor(coinCarry);coinCarry-=add;S.coins+=add;updateHud();}
-}
-
-// ── Proximity + action button ────────────────────────────────
-const actionBtn=document.getElementById('actionbtn'),abLabel=document.getElementById('ab-label'),
-  abBig=actionBtn.querySelector('.big');
-let nearSpawn=null,nearZoo=-1;
-function tickProximity(){
-  nearSpawn=null;nearZoo=-1;
-  for(const sp of S.spawns)if(Math.hypot(sp.x-S.px,sp.z-S.pz)<1.6){nearSpawn=sp;break;}
-  if(!nearSpawn)for(let i=1;i<8;i++)
-    if(Math.hypot(ZOOS[i].x-S.px,ZOOS[i].z-S.pz)<3.4){nearZoo=i;break;}
-  if(nearSpawn){abBig.textContent=nearSpawn.emoji;abLabel.textContent='Capture';actionBtn.style.display='block';}
-  else if(nearZoo>0){
-    const t=now();
-    if(t<S.heistLockUntil){abBig.textContent='🚔';abLabel.textContent=`${Math.ceil((S.heistLockUntil-t)/1000)}s`;}
-    else if(t<S.heistCoolUntil){abBig.textContent='🕶️';abLabel.textContent=`${Math.ceil((S.heistCoolUntil-t)/1000)}s`;}
-    else{abBig.textContent='🥷';abLabel.textContent='Heist!';}
-    actionBtn.style.display='block';
-  }else actionBtn.style.display='none';
-}
-actionBtn.addEventListener('click',()=>{
-  if(nearSpawn)openCapture(nearSpawn);
-  else if(nearZoo>0&&now()>=S.heistLockUntil&&now()>=S.heistCoolUntil)openHeist(nearZoo);
-});
-
-// ── Modal + timing minigame ──────────────────────────────────
-const mBack=document.getElementById('modal-back'),meter=document.getElementById('meter'),
-  mark=meter.querySelector('.mark'),zoneEl=meter.querySelector('.zone'),perfEl=meter.querySelector('.perfect'),
-  mGo=document.getElementById('m-go'),mCancel=document.getElementById('m-cancel'),
-  mResult=document.getElementById('m-result');
-let modal=null,paused=false;
-function openModal(){mBack.style.display='flex';paused=true;}
-function closeModal(){mBack.style.display='none';modal=null;paused=false;mResult.textContent='';meter.style.display='none';}
-function baseCaptureChance(sp){let c=RAR[sp.rarity].chance;if(S.gear.net)c+=.1;if(S.gear.tranq)c+=.1;return Math.min(c,.95);}
-function heistChance(rv){return clamp(0.55+0.04*levelOf(S.xp)-0.08*rv.security,0.10,0.85);}
-function openCapture(sp){
-  modal={kind:'capture',sp,phase:'idle'};
-  document.getElementById('m-em').textContent=sp.emoji;
-  document.getElementById('m-title').textContent=sp.name;
-  document.getElementById('m-sub').innerHTML=
-    `<span class="badge" style="background:${RAR[sp.rarity].color}">${RAR[sp.rarity].label}</span>`+
-    ` · base odds ${Math.round(baseCaptureChance(sp)*100)}% · stop the marker in the zone!`;
-  mGo.textContent='Capture';mGo.style.display='';mCancel.textContent='Leave';
-  openModal();startMeter();
-}
-function openHeist(zi){
-  const rv=S.rivals[zi-1];
-  modal={kind:'heist',rv,phase:'idle'};
-  document.getElementById('m-em').textContent='🥷';
-  document.getElementById('m-title').textContent=`Heist ${rv.name}'s zoo`;
-  document.getElementById('m-sub').innerHTML=
-    `${rv.animals.length} animals · 🛡️×${rv.security} · base odds ${Math.round(heistChance(rv)*100)}%<br>Get caught → locked out 90s!`;
-  mGo.textContent='Break in';mGo.style.display='';mCancel.textContent='Back away';
-  openModal();startMeter();
-}
-let meterT=0,meterOn=false,zoneL=0,zoneW=0,perfL=0,perfW=0;
-function startMeter(){
-  meter.style.display='block';meterOn=true;meterT=rnd()*3;
-  zoneW=.24;zoneL=.18+rnd()*.4;perfW=.06;perfL=zoneL+zoneW/2-perfW/2;
-  zoneEl.style.left=zoneL*100+'%';zoneEl.style.width=zoneW*100+'%';
-  perfEl.style.left=perfL*100+'%';perfEl.style.width=perfW*100+'%';
-}
-const meterPos=()=>0.5+0.48*Math.sin(meterT*3.4);
-function tickMeter(dt){if(meterOn){meterT+=dt;mark.style.left=meterPos()*100+'%';}}
-mGo.addEventListener('click',()=>{
-  if(!modal||modal.phase!=='idle')return;
-  modal.phase='done';meterOn=false;
-  const pos=meterPos();let bonus=0,hit='';
-  if(pos>=perfL&&pos<=perfL+perfW){bonus=.25;hit='🎯 PERFECT! +25%';}
-  else if(pos>=zoneL&&pos<=zoneL+zoneW){bonus=.12;hit='✅ Nice! +12%';}
-  else hit='❌ Missed the zone';
-  if(modal.kind==='capture')resolveCapture(modal.sp,bonus,hit);
-  else resolveHeist(modal.rv,bonus,hit);
-});
-mCancel.addEventListener('click',closeModal);
-mBack.addEventListener('click',e=>{if(e.target===mBack&&(!modal||modal.phase!=='idle'))closeModal();});
-
-function resolveCapture(sp,bonus,hit){
-  const chance=Math.min(baseCaptureChance(sp)+bonus,.98);
-  const idx=S.spawns.indexOf(sp);
-  if(rnd()<chance){
-    if(idx>=0){removeSpawnMesh(sp.id);S.spawns.splice(idx,1);}
-    const a={emoji:sp.emoji,name:sp.name,rarity:sp.rarity,variant:rollVariant()};
-    S.animals.push(a);S.xp+=RAR[sp.rarity].xp;
-    const v=vinfo(a.variant);
-    mResult.innerHTML=`${hit}<br>🎊 Caught <b>${aLabel(a)}</b>! +${RAR[sp.rarity].xp} XP`+
-      (v?`<br>${v.badge} <b>${v.label.toUpperCase()} EDITION!</b> Worth ${v.mult}× — rivals will want it...`:'');
-    (v||sp.rarity==='mythical')?sfx.great():sfx.good();
-    if(sp.rarity==='mythical')logEvent(`👑 <b>You captured the mythical ${sp.emoji} ${sp.name}!</b>`,true);
-    else if(v)logEvent(`${v.badge} You caught a <b>${v.label} ${sp.name}</b>!`);
-    updateHud();
-  }else{
-    const fled=rnd()<.5;
-    if(fled&&idx>=0){removeSpawnMesh(sp.id);S.spawns.splice(idx,1);}
-    mResult.innerHTML=`${hit}<br>💨 The ${sp.emoji} ${sp.name} slipped away${fled?' and fled!':" — it's still nearby!"}`;
-    sfx.bad();
-  }
-  mGo.style.display='none';mCancel.textContent='Continue';save();
-}
-function resolveHeist(rv,bonus,hit){
-  if(rv.animals.length===0){mResult.textContent='Their pens are empty!';mGo.style.display='none';return;}
-  const chance=Math.min(heistChance(rv)+bonus*.6,.92);
-  if(rnd()<chance){
-    const loot=rv.animals.splice((rnd()*rv.animals.length)|0,1)[0];
-    S.animals.push(loot);S.heistCoolUntil=now()+45e3;
-    mResult.innerHTML=`${hit}<br>🥷 <b>HEIST SUCCESSFUL!</b> You made off with <b>${aLabel(loot)}</b>!`;
-    sfx.great();
-    logEvent(`🥷 You stole ${aLabel(loot)} from <b>${rv.name}</b>! Watch your back...`);
-    rv.nextRob=Math.min(rv.nextRob,now()+60e3+rnd()*60e3);
-    updateHud();
-  }else{
-    S.heistLockUntil=now()+90e3;
-    mResult.innerHTML=`${hit}<br>🚨 <b>BUSTED!</b> ${rv.name}'s guards caught you. Locked out for 90s.`;
-    sfx.bad();
-    logEvent(`🚔 <b>${rv.name}</b> caught you mid-heist. Embarrassing.`);
-  }
-  mGo.style.display='none';mCancel.textContent='Run!';save();
-}
-
-// ── Shop / panels ────────────────────────────────────────────
-const SHOP=[
-  {key:'guard',emoji:'🛡️',name:'Security upgrade',desc:'-6% rival robbery odds per level (max 5)',
-    cost:()=>50*(S.security+1),can:()=>S.security<5,apply:()=>S.security++},
-  {key:'net',emoji:'🕸️',name:'Capture net',desc:'+10% capture chance (permanent)',
-    cost:()=>150,can:()=>!S.gear.net,apply:()=>S.gear.net=true},
-  {key:'tranq',emoji:'💉',name:'Tranq darts',desc:'+10% capture chance (stacks with net)',
-    cost:()=>400,can:()=>!S.gear.tranq,apply:()=>S.gear.tranq=true},
-  {key:'lure',emoji:'🍖',name:'Animal lure',desc:'A wild animal appears near you right now',
-    cost:()=>40,can:()=>true,apply:()=>{
-      const a=spawnAnimal(false);
-      if(a){a.x=clamp(S.px+(rnd()*6-3),2,WORLD-2);a.z=clamp(S.pz+(rnd()*6-3),2,WORLD-2);
-        a.tx=a.x;a.tz=a.z;const g=spawnGs.get(a.id);if(g)g.position.set(a.x,0,a.z);}
-    }},
-];
-const spEl=document.getElementById('sidepanel'),spTitle=document.getElementById('sp-title'),
-  spBody=document.getElementById('sp-body');
-let openPanel=null;
-function renderPanel(which){
-  if(which==='zoo'){
-    spTitle.textContent=`🏛️ Your collection — ${S.animals.length} · score ${score(S.animals)}`;
-    const sorted=[...S.animals].sort((a,b)=>aValue(b)-aValue(a));
-    spBody.innerHTML=`<div class="grid">`+sorted.map(a=>{const v=vinfo(a.variant);return `
-      <div class="acard" style="border-color:${RAR[a.rarity].color}">
-        <div class="em">${v?v.badge:''}${a.emoji}</div>
-        <div class="nm">${v?v.label+' ':''}${a.name}</div>
-        <div class="rt" style="color:${RAR[a.rarity].color}">${RAR[a.rarity].label} · ${aValue(a)}🪙/m</div>
-      </div>`;}).join('')+`</div>`;
-  }else if(which==='shop'){
-    spTitle.textContent=`🏪 Shop — ${fmt(S.coins)} 🪙`;
-    spBody.innerHTML=SHOP.map((it,i)=>{
-      const owned=!it.can(),cost=it.cost();
-      return `<div class="card"><div class="big">${it.emoji}</div><div class="grow">
-        <div class="title">${it.name}${it.key==='guard'?` (🛡️×${S.security})`:''}</div>
-        <div class="sub">${it.desc}</div></div>
-        <button class="buy" data-i="${i}" ${owned||S.coins<cost?'disabled':''}>${owned?'MAX':cost+' 🪙'}</button></div>`;
-    }).join('');
-    spBody.querySelectorAll('.buy').forEach(b=>b.addEventListener('click',()=>{
-      const it=SHOP[+b.dataset.i];
-      if(!it.can()||S.coins<it.cost())return;
-      S.coins-=it.cost();it.apply();sfx.coin();updateHud();renderPanel('shop');save();
-      logEvent(`🛍️ Bought ${it.emoji} <b>${it.name}</b>.`);
-    }));
-  }else if(which==='rivals'){
-    spTitle.textContent='🏆 Leaderboard';
-    const rows=[{name:'YOU ⭐',avatar:PLAYER_EMOJI,sc:score(S.animals),n:S.animals.length,sec:S.security,you:true},
-      ...S.rivals.map(r=>({name:r.name,avatar:r.avatar,sc:score(r.animals),n:r.animals.length,sec:r.security}))]
-      .sort((a,b)=>b.sc-a.sc);
-    const medals=['🥇','🥈','🥉'];
-    spBody.innerHTML=rows.map((r,i)=>`
-      <div class="card" ${r.you?'style="border-color:var(--gold)"':''}>
-        <div class="big">${medals[i]||(i+1)+'.'}</div><div class="big">${r.avatar}</div>
-        <div class="grow"><div class="title">${r.name}</div>
-        <div class="sub">${r.n} animals · 🛡️×${r.sec}</div></div>
-        <div class="title" style="color:var(--gold)">${fmt(r.sc)} pts</div></div>`).join('');
-  }else if(which==='log'){
-    spTitle.textContent='📜 World events';
-    spBody.innerHTML=S.log.map(l=>`<div class="logrow">${l.html}</div>`).join('')||'<div class="logrow">Nothing yet — go explore!</div>';
-  }
-}
-document.getElementById('menu').addEventListener('click',e=>{
-  const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.panel){
-    if(openPanel===b.dataset.panel){openPanel=null;spEl.classList.remove('open');}
-    else{openPanel=b.dataset.panel;renderPanel(openPanel);spEl.classList.add('open');}
-    document.querySelectorAll('#menu [data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===openPanel));
-  }
-});
-document.getElementById('sp-close').addEventListener('click',()=>{
-  openPanel=null;spEl.classList.remove('open');
-  document.querySelectorAll('#menu [data-panel]').forEach(x=>x.classList.remove('active'));
-});
-document.getElementById('btn-sound').addEventListener('click',e=>{
-  S.muted=!S.muted;e.target.textContent=S.muted?'🔇':'🔊';save();
-});
-let hardPaused=false;
-document.getElementById('btn-pause').addEventListener('click',e=>{
-  hardPaused=!hardPaused;e.target.textContent=hardPaused?'▶️':'⏸';
-});
-function updateHud(){
-  document.getElementById('hud-coins').textContent=fmt(S.coins);
-  document.getElementById('hud-level').textContent=levelOf(S.xp);
-  document.getElementById('hud-sec').textContent=S.security;
-}
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&S)save();});
-
-// ── Offline progress ─────────────────────────────────────────
-function applyOffline(){
-  const away=Math.min(now()-(S.lastSeen||now()),8*3600e3);
-  if(away>60e3){
-    const earned=Math.floor(score(S.animals)/60*(away/1000));
-    S.coins+=earned;
-    const catches=Math.min(Math.floor(away/90e3),20);
-    for(let i=0;i<catches;i++)S.rivals[(rnd()*7)|0].animals.push(randomAnimal());
-    if(earned>0)logEvent(`💤 While you were away, your zoo earned <b>${earned} 🪙</b>.`,true);
-  }
-  const t=now();
-  S.nextSpawnAt=Math.min(S.nextSpawnAt,t+4e3);S.nextMythAt=Math.min(S.nextMythAt,t+300e3);
-  for(const rv of S.rivals){rv.nextCap=Math.min(rv.nextCap,t+60e3);rv.nextRob=Math.min(rv.nextRob,t+180e3);}
-}
-
-// ── Main loop ────────────────────────────────────────────────
-const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
-let last=0;let saveT=0;
-function loop(ts){
-  requestAnimationFrame(loop);
-  const dt=Math.min((ts-last)/1000,0.05);last=ts;
-  if(!S)return;
-  tickMeter(dt);
-  if(!paused&&!hardPaused&&!document.hidden){
-    playerInput(dt);tickSpawns();tickRivals(dt);tickEconomy(dt);tickProximity();
-  }
-  // sync meshes
-  playerG.position.set(S.px,0,S.pz);
-  playerSpr.position.y=1.15+(moving?Math.abs(Math.sin(ts/110))*.16:Math.sin(ts/600)*.05);
-  S.rivals.forEach((rv,i)=>{rivalGs[i].position.set(rv.x,0,rv.z);
-    rivalGs[i].children[0].position.y=1.15+Math.abs(Math.sin(ts/130+i))*.1;});
-  for(const sp of S.spawns){
-    const g=spawnGs.get(sp.id);
-    if(g){g.position.set(sp.x,0,sp.z);g.children[0].position.y=1.0+Math.abs(Math.sin(ts/240+sp.id))*.14;}
-  }
-  // chase camera
-  camPos.set(S.px,12.5,S.pz+9.5);
-  camera.position.lerp(camPos,1-Math.pow(0.0015,dt));
-  camTarget.set(S.px,.9,S.pz);
-  camera.lookAt(camTarget);
-  renderer.render(scene,camera);
-  saveT+=dt;if(saveT>5){saveT=0;save();}
-}
-
-// ── Boot ─────────────────────────────────────────────────────
-if(!load())newGame();
-if(blocked(S.px,S.pz)){S.px=ZOOS[0].x;S.pz=ZOOS[0].z+2.2;}
-for(const sp of S.spawns)addSpawnMesh(sp);
-applyOffline();updateHud();
-document.getElementById('btn-sound').textContent=S.muted?'🔇':'🔊';
-if(!S.welcomed){S.welcomed=true;
-  showBanner('🌄 <b>Welcome to ZooWorld!</b> Touch & drag anywhere — a joystick appears. Catch animals, rob rivals!');}
-window.GAME={get S(){return S},RAR,SPECIES,score,levelOf,
-  reset:()=>{localStorage.removeItem(SAVE_KEY);location.reload();}};
-requestAnimationFrame(loop);
-</script>
+<script src="./lib/peerjs.min.js"></script>
+<script type="module" src="./js/main.js"></script>
 </body>
 </html>

@@ -1,79 +1,44 @@
 # 🦁 ZooWorld
 
-A zoo-collecting game: explore a ring-road world with 8 zoos, capture rare animals and special editions, and steal from rival zoos.
+A 3D multiplayer zoo-tycoon action game that runs entirely on GitHub Pages — no server, no accounts.
 
 ## ▶️ Play it now
 
-**https://mrsweats.github.io/zoo-game/** — works great on your phone. Hold anywhere to walk, catch animals, rob the 7 AI zookeepers, and defend your own zoo. Progress saves automatically on your device.
-
-The game lives in [`web/index.html`](web/index.html) (single file, no dependencies) and deploys to GitHub Pages automatically on every push to `main`.
-
----
-
-## Bonus mode: play by GitHub issue comments
-
-The same world also exists as a **real 8-player multiplayer game played entirely through GitHub issue comments** — perfect for playing with friends via the GitHub mobile app.
-
-```
-🟩🟩🌲🌾🟩🌵🟩🟩🟩🌴🟩
-🟩1️⃣🟫🟫🟫2️⃣🟫🟫🟫3️⃣🟩
-🐐🟫🐖🌲🟩🟩🌾🐓🟩🟫🟩
-🟩🟫🟩🟩🟦🌳🟩🌸🟩🟫🟩
-🟩8️⃣🟩🌳🌵🟩🟩🟩📍4️⃣🌸
-🟩🟫🟩🟩🟩🟩🌸🟦🟦🟫🟩
-🌳🟫🟩🌾🟩🌴🐸🟩🐯🟫🟩
-🦊7️⃣🟫🟫🟫6️⃣🟫🟫🟫5️⃣🟩
-🟩🟩🌳🟩🟩🐈🌳🟩🟩🟩🟩
-```
-
-## How to play
-
-1. Find an open **🌍 ZooWorld** issue in this repo (or ask for one to be created).
-2. Comment **`/join`** — you get one of the 8 zoos on the ring road and a starter animal.
-3. Play by commenting; the game bot replies with the live world map:
-
-| Command | What it does | ⚡ cost |
-|---|---|---|
-| `/join` | Claim one of the 8 zoos in this world | — |
-| `/map` | Show the world map | — |
-| `/move n s e w` | Walk the world (chain steps: `/move nne`) | 1/step |
-| `/capture` | Catch the wild animal on your tile | 2 |
-| `/steal <1-8>` | Heist a rival zoo — walk to their tile first! | 5 |
-| `/zoo [n or @user]` | Inspect any collection | — |
-| `/shop` / `/buy <item>` | Spend visitor income on gear & security | — |
-| `/me` | Your stats | — |
-| `/top` | Leaderboard | — |
-| `/help` | All of the above, in-game | — |
+**https://mrsweats.github.io/zoo-game/** — landscape mobile game. Touch anywhere and a joystick appears under your finger (WASD + Shift on desktop).
 
 ## The game
 
-- **⚡ Energy** — you have 10; it regenerates 1 every 30 minutes. Moving costs 1, capturing 2, heists 5. Check in a few times a day from your phone.
-- **🐾 Collection** — ~70 real animal species across 6 rarity tiers, from 🐇 Common to 🦖 Legendary. Wild animals appear on the map — race your neighbors to them.
-- **✨ Special editions** — every capture can roll **Shiny ✨ (5× value)** or **Golden 🌟 (20× value)**.
-- **🚨 Mythicals** — 🐉🦄🐲🦑 spawn extremely rarely and the whole world gets @mentioned. First to reach one can try to capture it.
-- **🥷 Heists** — stand on a rival's zoo tile and `/steal`. Success depends on your level vs their 🛡️ security. Get caught and you're locked out for 6 hours — and the victim is notified either way.
-- **🪙 Economy** — your zoo passively earns coins from visitors based on how rare your collection is. Spend on 🛡️ security upgrades, 🕸️ nets, 💉 tranq darts, or ⚡ energy refills.
-- **🌍 Worlds** — each world holds 8 players. `/join` a full world and matchmaking places you in the next one automatically.
+You run one of 8 zoo compounds around a ring road, against AI zookeepers — or your friends.
 
-## Setup (repo owner)
+- 🥅 **Net & carry** — swing your butterfly net at wild animals, then carry the catch home on your back. Nothing is yours until it's secured in a pen. Rarer animals are slower to haul.
+- 😈 **Grab & run heists** — walk into a rival's base, see every animal in its pen, grab the exact one you want, and RUN. The owner can tackle you; turrets zap you; dropped animals run loose for anyone to claim.
+- 🗼 **Base defense** — buy a turret (visible range ring, 3 levels), an alarm bell, and vault slots that make chosen animals unstealable.
+- 🏠 **Pen cap** — every animal needs a pen (6 to start, max 16). Full pens force choices: sell, release, or expand.
+- 🚨 **Wanted level** — thieving raises your notoriety; turrets everywhere start targeting you until it cools off.
+- 🧙 **Traveling merchant** — appears at random road spots selling exotics. First come, first served — and yes, you carry the purchase home.
+- ✨ Rarity tiers up to Mythical (🐉🦄🐲🦑, world-announced), plus Shiny ✨ / Golden 🌟 special editions.
+- 💨 Sprint with stamina, momentum movement, dust trails, offline coin earnings, autosave (solo).
 
-1. Merge this to the default branch and make sure **Actions are enabled**.
-2. Open any issue and comment **`/join`** — the game bootstraps itself: it creates the *ZooWorld #1* issue and seats you there. (Running **Actions → 🦁 ZooWorld → Run workflow** also works.)
-3. Share the world issue link — anyone who can comment can play. That's it: no server, no hosting; the world state lives in [`data/`](data/) and every turn is a commit.
+## 🌐 Multiplayer
+
+Tap **🌐 → Host a world** and share the 4-letter room code; up to 7 friends join from the same page. Connections are peer-to-peer (WebRTC via PeerJS) — the host's device is the authoritative server, AI runs the empty zoos, and MP worlds are separate from your solo save. Keep the host's tab open.
 
 ## Development
 
-Everything is dependency-free Node (18+):
-
 ```bash
-node game/local-play.js                    # scripted demo game + assertions
-node game/local-play.js alice "/move nne"  # play locally against .local-state.json
+node <serve web/ over http>            # ES modules require http, not file://
+# sim unit tests (pure logic, no browser):
+#   see game logic in web/js/sim.js — testable headlessly in Node
 ```
 
-- `game/engine.js` — rules: commands, energy, captures, heists, economy
-- `game/world.js` — 13×13 ring-road map generation + emoji rendering
-- `game/animals.js` — species roster, rarities, special editions
-- `game/index.js` — GitHub Actions entry point
-- `.github/workflows/zoo-world.yml` — the game loop (one queued run per comment)
+- `web/js/data.js` — species, rarities, shop, world geometry constants
+- `web/js/sim.js` — authoritative game simulation (pure logic, host-runnable)
+- `web/js/world3d.js` — three.js renderer (terrain, bases, entities, effects)
+- `web/js/net.js` — multiplayer transports (PeerJS + BroadcastChannel for tests)
+- `web/js/main.js` — input, HUD, panels, solo/host/guest wiring
+- `web/lib/` — vendored three.js and PeerJS
+- `.github/workflows/pages.yml` — deploys `web/` to GitHub Pages on every push to `main`
 
-See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the full design.
+Legacy modes from earlier iterations: the issue-comment multiplayer game (`game/`, `.github/workflows/zoo-world.yml`) still works — comment `/join` on any issue.
+
+See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for design history.
